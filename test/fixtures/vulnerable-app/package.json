@@ -1,0 +1,9 @@
+{
+  "name": "vulnerable-ai-saas",
+  "dependencies": {
+    "next": "15.0.0",
+    "openai": "4.0.0",
+    "stripe": "16.0.0",
+    "prisma": "6.0.0"
+  }
+}
