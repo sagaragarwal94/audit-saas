@@ -18,7 +18,8 @@
   "scripts": {
     "scan": "node ./bin/saas-audit.js scan .",
     "test": "node --test test/*.test.js",
-    "fixture:scan": "node ./bin/saas-audit.js scan ./test/fixtures/vulnerable-app --out-dir ./test-output"
+    "fixture:scan": "node ./bin/saas-audit.js scan ./test/fixtures/vulnerable-app --out-dir ./test-output",
+    "beta:pack": "npm test && mkdir -p dist-beta && npm pack --pack-destination ./dist-beta"
   },
   "keywords": [
     "security",
