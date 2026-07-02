@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve AuditSaas.
+Thanks for helping improve AuditSaas. This project is in private beta — this guide is for invited beta testers and collaborators, not public contributors.
 
 ## Good First Contributions
 

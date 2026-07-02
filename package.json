@@ -1,7 +1,8 @@
 {
   "name": "auditsaas",
   "version": "0.1.0",
-  "description": "Open-source local CLI for SaaS security, privacy, AI, payments, and production readiness audits.",
+  "private": true,
+  "description": "Local CLI for SaaS security, privacy, AI, payments, and production readiness audits. Private beta.",
   "type": "module",
   "bin": {
     "saas-audit": "./bin/saas-audit.js"
@@ -28,7 +29,7 @@
     "openai",
     "stripe"
   ],
-  "license": "Apache-2.0",
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=20"
   }

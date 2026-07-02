@@ -277,6 +277,21 @@ html[data-theme="light"] .theme-toggle .icon-dark { display: inline; }
   font-weight: 700;
 }
 
+/* Waitlist */
+.waitlist-panel {
+  max-width: 560px;
+  margin: 0 auto;
+  text-align: center;
+}
+.waitlist-panel .section-sub { margin-left: auto; margin-right: auto; }
+.waitlist-note {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.waitlist-note a { color: var(--accent); text-decoration: none; }
+.waitlist-note a:hover { text-decoration: underline; }
+
 /* CTA final */
 .cta-final { padding: 96px 0; text-align: center; }
 .cta-final .section-sub { margin-left: auto; margin-right: auto; }

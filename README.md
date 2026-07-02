@@ -1,8 +1,20 @@
 # AuditSaas
 
-Open-source local CLI that audits SaaS applications for security, privacy, AI, payments, production readiness, and launch-risk gaps.
+**Private beta.** This repository is not public. Access is by invitation only — see [Beta Access](#beta-access) below.
+
+Local CLI that audits SaaS applications for security, privacy, AI, payments, production readiness, and launch-risk gaps.
 
 AuditSaas runs on your machine, scans your project files locally, and writes reports into your repo. No dashboard, account, license key, Auth0, RevenueCat, or hosted backend is required.
+
+## Beta Access
+
+AuditSaas is currently invite-only. If you were invited to test it:
+
+1. Accept the collaborator/repo invite you received by email.
+2. Clone the repo and follow Quick Start below.
+3. Send feedback, bugs, and false positives/negatives to the contact in your invite email.
+
+Not invited yet? Join the waitlist at [auditsaas.org](https://auditsaas.org).
 
 ## Quick Start
 
@@ -127,7 +139,4 @@ Package contents are limited with the `files` allowlist in `package.json`.
 
 ## License
 
-Apache-2.0. See `LICENSE`.
-
-The AuditSaas name, logos, and related branding are not licensed for confusing
-commercial use. See `NOTICE`.
+Private beta license. Not open source. See `LICENSE` and `NOTICE`.
