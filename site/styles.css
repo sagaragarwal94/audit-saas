@@ -360,6 +360,51 @@ html[data-theme="light"] .theme-toggle .icon-dark { display: inline; }
 .contribute h2 { margin: 0 0 10px; }
 .contribute p { color: var(--muted); max-width: 520px; margin: 0 auto 22px; }
 
+/* Locked rule teaser */
+.locked-rules {
+  position: relative;
+  max-height: 420px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  margin-top: 12px;
+}
+.ghost-rule {
+  user-select: none;
+  pointer-events: none;
+  filter: blur(3px);
+  opacity: 0.55;
+}
+.ghost-rule h3 {
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.ghost-rule p {
+  color: var(--muted);
+  border-radius: 4px;
+}
+.locked-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  background: linear-gradient(to bottom, transparent 0%, var(--bg) 55%);
+}
+.locked-count {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.locked-copy {
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 0 20px;
+  font-size: 0.92rem;
+}
+
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
   .install-inner { grid-template-columns: 1fr; }
