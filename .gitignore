@@ -7,3 +7,7 @@ auditsaas-run-history.md
 .release/
 .DS_Store
 npm-debug.log*
+
+# Fixture .env used by tests to prove SECRETS_ENV_COMMITTED fires; contains
+# only fake example values, not a real secret.
+!test/fixtures/vulnerable-app/.env
