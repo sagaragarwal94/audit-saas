@@ -56,6 +56,22 @@ test("resolveAiReviewConfig requires local key and model", () => {
   assert.equal(config.baseUrl, "https://api.openai.com/v1");
 });
 
+test("resolveAiReviewConfig allows a local LLM base URL without an API key", () => {
+  assert.equal(
+    resolveAiReviewConfig({ env: { AUDITSAAS_LLM_MODEL: "llama3.1" } }).enabled,
+    false,
+    "still needs a base URL or a key"
+  );
+
+  const local = resolveAiReviewConfig({
+    env: { AUDITSAAS_LLM_MODEL: "llama3.1", AUDITSAAS_LLM_BASE_URL: "http://localhost:11434/v1" },
+  });
+
+  assert.equal(local.enabled, true);
+  assert.equal(local.baseUrl, "http://localhost:11434/v1");
+  assert.equal(local.apiKey, "local");
+});
+
 test("buildAiReviewInput redacts secret-like evidence and keeps compact scanner context", () => {
   const input = buildAiReviewInput(audit, { projectName: "Demo" });
 

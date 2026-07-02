@@ -13,13 +13,18 @@ export function resolveAiReviewConfig({ env = process.env, modelOverride, disabl
 
   const apiKey = env.AUDITSAAS_LLM_API_KEY || "";
   const model = modelOverride || env.AUDITSAAS_LLM_MODEL || "";
-  if (!apiKey || !model) return { enabled: false, reason: "missing_config" };
+  const baseUrl = env.AUDITSAAS_LLM_BASE_URL || "";
+  if (!model) return { enabled: false, reason: "missing_config" };
+  // A hosted default endpoint always needs a real key. An explicit base URL
+  // usually means a local model server (Ollama, LM Studio, ...) that does
+  // not require one.
+  if (!apiKey && !baseUrl) return { enabled: false, reason: "missing_config" };
 
   return {
     enabled: true,
-    apiKey,
+    apiKey: apiKey || "local",
     model,
-    baseUrl: env.AUDITSAAS_LLM_BASE_URL || DEFAULT_BASE_URL,
+    baseUrl: baseUrl || DEFAULT_BASE_URL,
   };
 }
 

@@ -48,12 +48,22 @@ Each scan writes:
 
 ## Optional AI Review
 
-The deterministic scanner does not need external services. If you want an OpenAI-compatible second-pass review, set:
+The deterministic scanner does not need external services. If you want a second-pass AI review of the findings, point it at any OpenAI-compatible endpoint — a hosted provider with your own API key, or a fully local model server such as Ollama or LM Studio.
+
+Hosted provider with your own key:
 
 ```bash
 export AUDITSAAS_LLM_API_KEY=your-provider-key
 export AUDITSAAS_LLM_MODEL=gpt-4.1-mini
 export AUDITSAAS_LLM_BASE_URL=https://api.openai.com/v1
+saas-audit scan . --out-dir ./audit-output
+```
+
+Local LLM (no API key required):
+
+```bash
+export AUDITSAAS_LLM_BASE_URL=http://localhost:11434/v1
+export AUDITSAAS_LLM_MODEL=llama3.1
 saas-audit scan . --out-dir ./audit-output
 ```
 

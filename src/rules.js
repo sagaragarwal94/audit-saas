@@ -43,8 +43,23 @@ function sourceFiles(project) {
   return project.files.filter((file) => !file.classification.includes("environment") && /\.(t|j)sx?$|\.mjs$|\.cjs$/.test(file.relativePath));
 }
 
+function isTestFile(relativePath) {
+  return /\.(test|spec)\.[jt]sx?$/i.test(relativePath) || /(^|[\\/])__tests__([\\/]|$)/i.test(relativePath);
+}
+
+// Source files that represent real application behavior: excludes docs/config
+// (already excluded by sourceFiles) and test/spec files, so rules that assume
+// a live login/payment/AI endpoint don't fire on assertions or fixtures.
+function appCodeFiles(project) {
+  return sourceFiles(project).filter((file) => !isTestFile(file.relativePath));
+}
+
 function filesWith(project, label) {
   return project.files.filter((file) => file.classification.includes(label));
+}
+
+function appFilesWith(project, label) {
+  return appCodeFiles(project).filter((file) => file.classification.includes(label));
 }
 
 function lineOf(content, pattern) {
@@ -79,7 +94,7 @@ const rules = [
     recommendation: "Use Argon2id or bcrypt with a suitable cost factor, never plaintext or raw SHA/MD5 hashes.",
     standards: ["OWASP ASVS V2 Authentication", "OWASP Top 10: A07 Identification and Authentication Failures"],
     detect(project) {
-      const authFiles = filesWith(project, "auth");
+      const authFiles = appFilesWith(project, "auth");
       const findings = [];
       for (const file of authFiles) {
         if (/password/i.test(file.content) && /\b(md5|sha1|sha256|createHash)\b/i.test(file.content) && !/bcrypt|argon2/i.test(file.content)) {
@@ -110,7 +125,7 @@ const rules = [
     recommendation: "Apply rate limits per IP and per account, track failed attempts, and add lockout/backoff controls.",
     standards: ["OWASP ASVS V2 Authentication"],
     detect(project) {
-      return filesWith(project, "auth")
+      return appFilesWith(project, "auth")
         .filter((file) => /login|signin|signIn|credentials/i.test(file.relativePath + file.content))
         .filter((file) => !/rateLimit|limiter|upstash|slowDown|failedLogin|attempt/i.test(file.content))
         .map((file) => findingForFile({}, file, /login|signin|signIn|credentials/i));
@@ -125,7 +140,7 @@ const rules = [
     recommendation: "Configure bounded session expiry, refresh-token rotation where relevant, and server-side logout invalidation.",
     standards: ["OWASP ASVS V3 Session Management"],
     detect(project) {
-      const authFiles = filesWith(project, "auth");
+      const authFiles = appFilesWith(project, "auth");
       if (authFiles.length === 0) return [];
       const hasExpiry = authFiles.some((file) => /maxAge|expires|expiresIn|session.*strategy|jwt.*maxAge/i.test(file.content));
       return hasExpiry ? [] : [{ confidence: "low" }];
@@ -233,6 +248,7 @@ const rules = [
     detect(project) {
       return filesWith(project, "environment")
         .filter((file) => !/\.env\.example$/.test(file.relativePath))
+        .filter((file) => !file.gitIgnored)
         .filter((file) => /(SECRET|PRIVATE|TOKEN|PASSWORD|OPENAI|STRIPE|SUPABASE|DATABASE_URL)\s*=/i.test(file.content))
         .map((file) => findingForFile({}, file, /(SECRET|PRIVATE|TOKEN|PASSWORD|OPENAI|STRIPE|SUPABASE|DATABASE_URL)\s*=/i, { confidence: "high" }));
     }
@@ -284,7 +300,8 @@ const rules = [
     codeExample: "const event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);",
     standards: ["OWASP API Security: Unrestricted Access to Sensitive Business Flows"],
     detect(project) {
-      return filesWith(project, "payment")
+      return appFilesWith(project, "payment")
+        .filter((file) => file.classification.includes("api_route"))
         .filter((file) => /webhook/i.test(file.relativePath + file.content) && /stripe/i.test(file.content))
         .filter((file) => !/webhooks\.constructEvent|constructEventAsync/i.test(file.content))
         .map((file) => findingForFile({}, file, /webhook/i, { confidence: "high" }));
@@ -298,7 +315,8 @@ const rules = [
     risk: "Repeated webhook delivery can duplicate side effects, corrupt subscription state, or issue duplicate credits.",
     recommendation: "Store processed event IDs and make subscription updates idempotent.",
     detect(project) {
-      return filesWith(project, "payment")
+      return appFilesWith(project, "payment")
+        .filter((file) => file.classification.includes("api_route"))
         .filter((file) => /webhook/i.test(file.relativePath + file.content))
         .filter((file) => !/event\.id|idempot|processed/i.test(file.content))
         .map((file) => findingForFile({}, file, /webhook/i));
@@ -313,7 +331,7 @@ const rules = [
     recommendation: "Keep AI keys server-side, require authentication, enforce per-user/IP/tenant rate limits, cap tokens/input/file size, and track cost per billing account.",
     standards: ["OWASP LLM Top 10: LLM04 Model Denial of Service", "OWASP LLM Top 10: LLM06 Sensitive Information Disclosure"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => file.classification.includes("ai"))
         .filter((file) => /openai|generateText|streamText|chat\.completions|responses\.create/i.test(file.content))
         .filter((file) => !/rateLimit|quota|maxTokens|max_tokens|usage|billing|plan|auth\(|session|getAuth/i.test(file.content))
@@ -329,7 +347,7 @@ const rules = [
     recommendation: "Add prompt-injection mitigations, tool authorization checks, data minimization, and disclosure in the privacy policy when prompts are sent to AI providers.",
     standards: ["OWASP LLM Top 10: LLM01 Prompt Injection"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => file.classification.includes("ai"))
         .filter((file) => /system|tools|function_call|retriev|vector|prompt/i.test(file.content))
         .map((file) => findingForFile({}, file, /system|tools|function_call|retriev|vector|prompt/i, { confidence: "low" }));

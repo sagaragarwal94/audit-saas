@@ -7,18 +7,31 @@
 <meta name="description" content="Every AuditSaas detection rule: risk, recommendation, and OWASP mapping." />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
 <link rel="stylesheet" href="styles.css" />
+<script>
+  (function () {
+    var stored = localStorage.getItem("theme");
+    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>
 </head>
 <body>
 
 <header class="nav">
   <div class="wrap nav-inner">
     <a href="/" class="brand">Audit<span>Saas</span></a>
-    <nav class="nav-links">
-      <a href="/#features">Features</a>
-      <a href="/rules.html">Rules</a>
-      <a href="/#install">Install</a>
-      <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
-    </nav>
+    <div class="nav-right">
+      <nav class="nav-links">
+        <a href="/#features">Features</a>
+        <a href="/rules.html">Rules</a>
+        <a href="/#install">Install</a>
+        <a href="/#ai-review">AI Review</a>
+        <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
+        <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -172,5 +185,12 @@
   </div>
 </footer>
 
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("theme", next);
+  });
+</script>
 </body>
 </html>

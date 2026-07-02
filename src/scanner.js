@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 const IGNORE_DIRS = new Set([".git", "node_modules", ".next", "dist", "build", "coverage", ".turbo", ".vercel", "audit-output", "test-output"]);
@@ -7,18 +8,21 @@ const TEXT_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", "
 export async function collectProject(root) {
   const files = await walk(root);
   const packageJson = await readJson(path.join(root, "package.json"));
+  const gitIgnored = getGitIgnoredSet(root);
   const textFiles = [];
 
   for (const file of files) {
     if (!isTextFile(file)) continue;
     const content = await safeRead(file);
     if (content == null) continue;
+    const relativePath = path.relative(root, file);
     textFiles.push({
       path: file,
-      relativePath: path.relative(root, file),
+      relativePath,
       content,
       ext: path.extname(file),
-      classification: classifyFile(path.relative(root, file), content)
+      classification: classifyFile(relativePath, content),
+      gitIgnored: gitIgnored ? gitIgnored.has(relativePath.replaceAll("\\", "/")) : false
     });
   }
 
@@ -30,6 +34,18 @@ export async function collectProject(root) {
     framework: detectFramework(textFiles, packageJson),
     language: textFiles.some((file) => file.ext === ".ts" || file.ext === ".tsx") ? "typescript" : "javascript"
   };
+}
+
+function getGitIgnoredSet(root) {
+  try {
+    const output = execFileSync("git", ["-C", root, "ls-files", "--others", "--ignored", "--exclude-standard"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+    return new Set(output.split("\n").filter(Boolean).map((entry) => entry.replaceAll("\\", "/")));
+  } catch {
+    return null;
+  }
 }
 
 async function walk(dir) {
