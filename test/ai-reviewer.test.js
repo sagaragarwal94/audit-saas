@@ -46,10 +46,10 @@ const audit = {
 
 test("resolveAiReviewConfig requires local key and model", () => {
   assert.equal(resolveAiReviewConfig({ env: {} }).enabled, false);
-  assert.equal(resolveAiReviewConfig({ env: { GRAVEL_AI_REVIEW: "false" } }).reason, "disabled");
+  assert.equal(resolveAiReviewConfig({ env: { AUDITSAAS_AI_REVIEW: "false" } }).reason, "disabled");
 
   const config = resolveAiReviewConfig({
-    env: { GRAVEL_LLM_API_KEY: "key", GRAVEL_LLM_MODEL: "model" },
+    env: { AUDITSAAS_LLM_API_KEY: "key", AUDITSAAS_LLM_MODEL: "model" },
   });
 
   assert.equal(config.enabled, true);
@@ -70,12 +70,12 @@ test("redactSecrets removes common token shapes", () => {
 });
 
 test("runAiReview writes markdown and json from an OpenAI-compatible response", async () => {
-  const outDir = path.join(os.tmpdir(), `gravel-ai-review-${Date.now()}`);
+  const outDir = path.join(os.tmpdir(), `auditsaas-ai-review-${Date.now()}`);
   const review = await runAiReview({
     audit,
     outDir,
     projectName: "Demo",
-    env: { GRAVEL_LLM_API_KEY: "local-key", GRAVEL_LLM_MODEL: "test-model", GRAVEL_LLM_BASE_URL: "https://llm.example/v1" },
+    env: { AUDITSAAS_LLM_API_KEY: "local-key", AUDITSAAS_LLM_MODEL: "test-model", AUDITSAAS_LLM_BASE_URL: "https://llm.example/v1" },
     fetchImpl: async (url, options) => {
       assert.equal(url, "https://llm.example/v1/chat/completions");
       const body = JSON.parse(options.body);

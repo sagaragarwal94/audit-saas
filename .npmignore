@@ -1,8 +1,6 @@
-.env
 audit-output/
 test-output/
-web/data/
-web/*.md
+.release/
 node_modules/
 .DS_Store
 npm-debug.log*

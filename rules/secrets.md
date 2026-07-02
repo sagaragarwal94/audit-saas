@@ -23,3 +23,11 @@
 **Risk:** Secrets in `NEXT_PUBLIC_*` variables or client components can be exposed to every browser user.
 **Recommendation:** Never expose OpenAI, Stripe secret, Supabase service role, or private API keys to frontend code. Move calls server-side or behind an authenticated proxy.
 **Standards:** OWASP Top 10: A02 Cryptographic Failures
+
+## CI_SECRETS_HARDCODED_IN_WORKFLOW
+**Title:** CI/CD workflow file may contain a hardcoded secret
+**Category:** secrets
+**Severity:** critical
+**Risk:** Secrets committed inside a GitHub Actions or other CI workflow file are visible to anyone with repository read access and remain in git history even after removal.
+**Recommendation:** Reference secrets only through the CI provider's encrypted secret store (e.g. `${{ secrets.NAME }}`) and rotate any value that was ever hardcoded.
+**Standards:** OWASP Top 10: A05 Security Misconfiguration

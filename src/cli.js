@@ -1,33 +1,26 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { runAiReview } from "./ai-reviewer.js";
 import { auditProject } from "./index.js";
 import { appendRunHistory } from "./run-history.js";
-import {
-  apiBase,
-  clearCredentials,
-  completeRun,
-  createDevice,
-  getDeviceId,
-  hashProjectPath,
-  pollDeviceToken,
-  readCredentials,
-  startRun,
-  updateRun,
-  whoami,
-  writeCredentials,
-} from "./cli-license.js";
+import { color, severityLabel, formatDuration, padRight } from "./tty.js";
+
+const CLI_VERSION = readCliVersion();
 
 export async function runCli(argv) {
   const [, , command = "help", targetArg = "."] = argv;
+
+  if (command === "version" || command === "--version" || command === "-v") {
+    console.log(CLI_VERSION);
+    return;
+  }
 
   if (command === "help" || command === "--help" || command === "-h") {
     printHelp();
     return;
   }
 
-  if (command === "login") return login();
-  if (command === "logout") return logout();
-  if (command === "whoami") return printWhoami();
   if (command !== "scan") {
     throw new Error(`Unknown command "${command}". Run: saas-audit help`);
   }
@@ -35,106 +28,21 @@ export async function runCli(argv) {
   await scan(argv, targetArg);
 }
 
-async function login() {
-  const existing = await readCredentials();
-  if (existing?.licenseToken) {
-    console.log(`Already connected. Run \`saas-audit whoami\` to inspect this device, or \`saas-audit logout\` to reconnect.`);
-    return;
-  }
-
-  const deviceId = await getDeviceId();
-  const device = await createDevice(deviceId);
-  if (device.licenseToken) {
-    await writeCredentials({
-      licenseToken: device.licenseToken,
-      userId: device.userId,
-      email: device.email,
-      plan: device.plan,
-      deviceId,
-      apiBase: apiBase(),
-    });
-    console.log(`Connected as ${device.email || device.userId}. Plan: ${device.plan}.`);
-    return;
-  }
-
-  console.log("Open this URL to connect the Gravel CLI:");
-  console.log(device.verificationUrl);
-  console.log(`Code: ${device.userCode}`);
-  console.log("Waiting for approval...");
-
-  const deadline = new Date(device.expiresAt).getTime();
-  while (Date.now() < deadline) {
-    const result = await pollDeviceToken(device.deviceCode);
-    if (result.licenseToken) {
-      await writeCredentials({
-        licenseToken: result.licenseToken,
-        userId: result.userId,
-        email: result.email,
-        plan: result.plan,
-        deviceId,
-        apiBase: apiBase(),
-      });
-      console.log(`Connected as ${result.email || result.userId}. Plan: ${result.plan}.`);
-      return;
-    }
-    await wait(2500);
-  }
-
-  throw new Error("Login expired. Run `saas-audit login` again.");
-}
-
-async function logout() {
-  await clearCredentials();
-  console.log("Gravel CLI credentials removed.");
-}
-
-async function printWhoami() {
-  const credentials = await requireCredentials();
-  const remote = await whoami(credentials).catch(() => null);
-  console.log(`API: ${apiBase()}`);
-  console.log(`Token source: ${credentials.source}`);
-  console.log(`Account: ${remote?.user?.email || credentials.email || "unknown"}`);
-  console.log(`Plan: ${remote?.subscription?.entitlement || credentials.plan || "free"}`);
-  console.log(`Free run used: ${remote?.trial?.completed ? "yes" : "no"}`);
-}
-
 async function scan(argv, targetArg) {
-  const credentials = await requireCredentials();
   const options = parseOptions(argv.slice(4));
   const target = path.resolve(process.cwd(), targetArg);
   const outDir = path.resolve(process.cwd(), options.outDir || "audit-output");
   const projectName = options.name || options.projectName || path.basename(target);
   const focus = options.focus || "all";
+  const runId = `local_${Date.now().toString(36)}`;
 
-  const started = await startRun(credentials, {
-    projectName,
-    projectPathHash: hashProjectPath(target),
-    source: "cli",
-  }).catch((error) => {
-    if (error.status === 402) {
-      throw new Error(`${error.message}\nUpgrade: ${absoluteUrl(error.data?.checkoutUrl || "/billing?plan=pro")}`);
-    }
-    throw error;
-  });
-  const runId = started.run.id;
-
-  await updateRun(credentials, runId, {
-    status: "running",
-    percentComplete: 18,
-    currentStep: "Collecting project files",
-  });
+  console.log(color.dim(`Scanning ${target} ...`));
 
   const result = await auditProject({
     target,
     outDir,
     focus,
     url: options.url,
-  });
-
-  await updateRun(credentials, runId, {
-    status: "running",
-    percentComplete: 78,
-    currentStep: "Reviewing audit findings",
   });
 
   const aiReview = await runAiReview({
@@ -156,30 +64,55 @@ async function scan(argv, targetArg) {
     reportPath: result.outDir,
   });
 
-  await completeRun(credentials, runId, {
-    findingsCount: result.summary.total,
-    findingsSummary: result.summary,
-    findings: result.findings,
-    reportPath: result.outDir,
-    aiReviewStatus: aiReview.status,
-    aiReviewSummary: aiReview.summary,
-    aiReviewModel: aiReview.model,
-    aiReviewGeneratedAt: aiReview.generatedAt,
-  });
-
-  console.log("AI SaaS audit complete.");
-  console.log(`Project: ${result.project.root}`);
-  console.log(`Findings: ${result.summary.total} total, ${result.summary.critical} critical, ${result.summary.high} high`);
-  console.log(`AI review: ${aiReview.status}${aiReview.model ? ` (${aiReview.model})` : ""}`);
-  console.log(`Reports: ${result.outDir}`);
+  printSummary(result, aiReview, options);
 }
 
-async function requireCredentials() {
-  const credentials = await readCredentials();
-  if (!credentials?.licenseToken) {
-    throw new Error("Run `saas-audit login` before scanning. Set GRAVEL_API_BASE if your Gravel app is not local.");
+function printSummary(result, aiReview, options) {
+  const { summary, filesScanned, durationMs, findings } = result;
+
+  console.log("");
+  console.log(color.bold("AuditSaas scan complete"));
+  console.log(color.dim(`${filesScanned} files scanned in ${formatDuration(durationMs)}`));
+  console.log("");
+
+  if (summary.total === 0) {
+    console.log(color.green("No findings for the selected focus. Nice."));
+  } else {
+    const bands = ["critical", "high", "medium", "low", "info"]
+      .filter((severity) => summary[severity] > 0)
+      .map((severity) => severityLabel(severity, summary[severity]));
+    console.log(`${color.bold(String(summary.total))} findings: ${bands.join("  ")}`);
+    console.log("");
+    printCategoryTable(findings);
   }
-  return credentials;
+
+  console.log("");
+  console.log(`${color.bold("AI review:")} ${aiReview.status}${aiReview.model ? ` (${aiReview.model})` : ""}`);
+  console.log(`${color.bold("Reports:")} ${result.outDir}`);
+  if (options.url) {
+    console.log(color.dim(`Runtime headers checked against: ${options.url}`));
+  }
+}
+
+function printCategoryTable(findings) {
+  const byCategory = new Map();
+  for (const finding of findings) {
+    const row = byCategory.get(finding.category) || { critical: 0, high: 0, medium: 0, low: 0, info: 0, total: 0 };
+    row[finding.severity] = (row[finding.severity] || 0) + 1;
+    row.total += 1;
+    byCategory.set(finding.category, row);
+  }
+
+  const categories = [...byCategory.keys()].sort((a, b) => byCategory.get(b).total - byCategory.get(a).total);
+  const nameWidth = Math.max(...categories.map((name) => name.length), "category".length) + 2;
+
+  console.log(color.dim(`${padRight("category", nameWidth)}critical  high  medium  low  info`));
+  for (const category of categories) {
+    const row = byCategory.get(category);
+    console.log(
+      `${padRight(category, nameWidth)}${padRight(row.critical || "-", 10)}${padRight(row.high || "-", 6)}${padRight(row.medium || "-", 8)}${padRight(row.low || "-", 5)}${row.info || "-"}`
+    );
+  }
 }
 
 function parseOptions(args) {
@@ -200,37 +133,38 @@ function parseOptions(args) {
   return options;
 }
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function absoluteUrl(value) {
+function readCliVersion() {
   try {
-    return new URL(value).toString();
+    const packagePath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
+    return JSON.parse(readFileSync(packagePath, "utf8")).version || "0.0.0";
   } catch {
-    return new URL(value, apiBase()).toString();
+    return "0.0.0";
   }
 }
 
 function printHelp() {
-  console.log(`Gravel Audit CLI
+  console.log(`${color.bold("AuditSaas")} ${color.dim(`v${CLI_VERSION}`)} — local security, privacy, AI, and payments audit CLI
 
-Usage:
-  saas-audit login
-  saas-audit logout
-  saas-audit whoami
-  saas-audit scan <path> [--name "My App"] [--out-dir ./audit-output] [--focus security|privacy|payments|ai|all] [--url https://app.example.com] [--ai-model gpt-4.1-mini] [--no-ai-review]
+${color.bold("Usage")}
+  saas-audit --version
+  saas-audit scan <path> [options]
 
-Environment:
-  GRAVEL_API_BASE=http://127.0.0.1:4000
-  GRAVEL_LICENSE_TOKEN=<token>
-  GRAVEL_LLM_API_KEY=<your-local-llm-key>
-  GRAVEL_LLM_MODEL=<openai-compatible-model>
-  GRAVEL_LLM_BASE_URL=https://api.openai.com/v1
-  GRAVEL_AI_REVIEW=true|false
+${color.bold("Options")}
+  --name "My App"              Project name used in reports
+  --out-dir ./audit-output     Where to write report files (default: ./audit-output)
+  --focus security|privacy|payments|ai|all   Limit which rule categories run (default: all)
+  --url https://app.example.com   Also check HTTPS and security headers on a live URL
+  --ai-model gpt-4.1-mini       Override the AI review model
+  --no-ai-review                 Skip the optional AI second-pass review
 
-Examples:
-  saas-audit login
+${color.bold("Environment")}
+  AUDITSAAS_LLM_API_KEY=<your-local-llm-key>
+  AUDITSAAS_LLM_MODEL=<openai-compatible-model>
+  AUDITSAAS_LLM_BASE_URL=https://api.openai.com/v1
+  AUDITSAAS_AI_REVIEW=true|false
+  NO_COLOR=1                     Disable colored terminal output
+
+${color.bold("Examples")}
   saas-audit scan .
   saas-audit scan . --focus ai
   saas-audit scan . --url https://app.example.com

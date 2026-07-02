@@ -7,6 +7,7 @@ export async function writeReports(payload) {
   const files = {
     "audit-report.md": renderAuditReport(payload),
     "findings.json": JSON.stringify(payload.findings, null, 2),
+    "findings.sarif.json": JSON.stringify(renderSarif(payload.findings), null, 2),
     "priority-action-plan.md": renderActionPlan(payload.findings),
     "privacy-policy-draft.md": payload.privacyPolicy,
     "data-inventory.md": renderDataInventory(payload.dataInventory),
@@ -14,6 +15,51 @@ export async function writeReports(payload) {
   };
 
   await Promise.all(Object.entries(files).map(([name, content]) => fs.writeFile(path.join(payload.outDir, name), content)));
+}
+
+const SARIF_LEVEL = { critical: "error", high: "error", medium: "warning", low: "note", info: "note" };
+
+function renderSarif(findings) {
+  const ruleIds = [...new Set(findings.map((finding) => finding.id))];
+  return {
+    $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+    version: "2.1.0",
+    runs: [
+      {
+        tool: {
+          driver: {
+            name: "AuditSaas",
+            informationUri: "https://auditsaas.org",
+            rules: ruleIds.map((id) => {
+              const finding = findings.find((item) => item.id === id);
+              return {
+                id,
+                shortDescription: { text: finding.title },
+                fullDescription: { text: finding.risk || finding.title },
+                help: { text: finding.recommendation || "" },
+                properties: { category: finding.category, standards: finding.standards || [] }
+              };
+            })
+          }
+        },
+        results: findings.map((finding) => ({
+          ruleId: finding.id,
+          level: SARIF_LEVEL[finding.severity] || "warning",
+          message: { text: finding.recommendation || finding.title },
+          locations: finding.file
+            ? [
+                {
+                  physicalLocation: {
+                    artifactLocation: { uri: finding.file.replaceAll("\\", "/") },
+                    region: { startLine: finding.line || 1 }
+                  }
+                }
+              ]
+            : []
+        }))
+      }
+    ]
+  };
 }
 
 function renderAuditReport({ project, runtime, findings, summary, dataInventory }) {

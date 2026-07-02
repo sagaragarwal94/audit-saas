@@ -9,17 +9,17 @@ const SECRET_PATTERNS = [
 ];
 
 export function resolveAiReviewConfig({ env = process.env, modelOverride, disabled = false } = {}) {
-  if (disabled || isFalse(env.GRAVEL_AI_REVIEW)) return { enabled: false, reason: "disabled" };
+  if (disabled || isFalse(env.AUDITSAAS_AI_REVIEW)) return { enabled: false, reason: "disabled" };
 
-  const apiKey = env.GRAVEL_LLM_API_KEY || "";
-  const model = modelOverride || env.GRAVEL_LLM_MODEL || "";
+  const apiKey = env.AUDITSAAS_LLM_API_KEY || "";
+  const model = modelOverride || env.AUDITSAAS_LLM_MODEL || "";
   if (!apiKey || !model) return { enabled: false, reason: "missing_config" };
 
   return {
     enabled: true,
     apiKey,
     model,
-    baseUrl: env.GRAVEL_LLM_BASE_URL || DEFAULT_BASE_URL,
+    baseUrl: env.AUDITSAAS_LLM_BASE_URL || DEFAULT_BASE_URL,
   };
 }
 
@@ -118,7 +118,7 @@ async function requestOpenAiCompatibleReview({ config, reviewInput, fetchImpl })
       messages: [
         {
           role: "system",
-          content: "You are Gravel's senior SaaS security audit reviewer. Review deterministic scanner output. Do not claim to have seen full source code. Be concise, practical, and specific.",
+          content: "You are AuditSaas's senior SaaS security audit reviewer. Review deterministic scanner output. Do not claim to have seen full source code. Be concise, practical, and specific.",
         },
         {
           role: "user",
@@ -146,10 +146,10 @@ async function writeAiReviewFiles(outDir, review, reviewInput) {
 
 function renderAiReviewMarkdown(review) {
   if (review.status === "completed") {
-    return `# Gravel AI Audit Review\n\nModel: ${review.model}\nGenerated: ${review.generatedAt}\n\n${review.content}\n`;
+    return `# AuditSaas AI Audit Review\n\nModel: ${review.model}\nGenerated: ${review.generatedAt}\n\n${review.content}\n`;
   }
 
-  return `# Gravel AI Audit Review\n\nStatus: ${review.status}\nModel: ${review.model || "not configured"}\nGenerated: ${review.generatedAt || new Date().toISOString()}\n\n${review.summary}\n${review.error ? `\nError: ${review.error}\n` : ""}`;
+  return `# AuditSaas AI Audit Review\n\nStatus: ${review.status}\nModel: ${review.model || "not configured"}\nGenerated: ${review.generatedAt || new Date().toISOString()}\n\n${review.summary}\n${review.error ? `\nError: ${review.error}\n` : ""}`;
 }
 
 function summarizeReview(content) {

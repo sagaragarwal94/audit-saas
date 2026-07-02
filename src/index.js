@@ -7,12 +7,14 @@ import { buildDataInventory, buildPrivacyPolicy } from "./privacy.js";
 import { writeReports } from "./reports.js";
 
 export async function auditProject({ target, outDir, focus = "all", url }) {
+  const startedAt = Date.now();
   const project = await collectProject(target);
   const runtime = url ? await scanRuntimeUrl(url) : null;
   const dataInventory = buildDataInventory(project);
   const findings = runRules(project, { focus, runtime, dataInventory });
   const privacyPolicy = buildPrivacyPolicy(project, dataInventory);
   const summary = summarize(findings);
+  const durationMs = Date.now() - startedAt;
 
   await fs.mkdir(outDir, { recursive: true });
   await writeReports({
@@ -25,7 +27,16 @@ export async function auditProject({ target, outDir, focus = "all", url }) {
     privacyPolicy
   });
 
-  return { outDir: path.resolve(outDir), project, runtime, findings, summary, dataInventory };
+  return {
+    outDir: path.resolve(outDir),
+    project,
+    runtime,
+    findings,
+    summary,
+    dataInventory,
+    filesScanned: project.files.length,
+    durationMs
+  };
 }
 
 function summarize(findings) {

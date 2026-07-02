@@ -1,4 +1,4 @@
-# Gravel Rule Catalog
+# AuditSaas Rule Catalog
 
 Rules are organized by category in Markdown files. Each rule block uses this shape:
 

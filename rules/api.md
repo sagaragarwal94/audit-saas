@@ -24,3 +24,36 @@
 **Risk:** Unvalidated input can lead to malformed data, injection risks, and unexpected application behavior.
 **Recommendation:** Validate request bodies with Zod, Valibot, Joi, Yup, or equivalent schema validation before use.
 **Standards:** OWASP Top 10: A03 Injection; OWASP ASVS V5 Validation
+
+## OPEN_REDIRECT_UNVALIDATED
+**Title:** Redirect target may be built from unvalidated user input
+**Category:** api
+**Severity:** medium
+**Risk:** Redirecting to a URL taken directly from a query parameter can be used for phishing or to bypass OAuth redirect_uri allowlists.
+**Recommendation:** Validate redirect targets against an allowlist of internal paths or trusted domains before redirecting.
+**Standards:** OWASP Top 10: A01 Broken Access Control
+
+## MASS_ASSIGNMENT_RISK
+**Title:** Request body may be written directly into a database call
+**Category:** api
+**Severity:** high
+**Risk:** Spreading the raw request body into a create/update call lets attackers set fields they should not control, such as `role`, `isAdmin`, or `plan`.
+**Recommendation:** Explicitly allowlist the fields copied from request input into database writes instead of spreading the full body.
+**Code Example:** const { name, email } = body; await db.user.update({ where: { id }, data: { name, email } });
+**Standards:** OWASP Top 10: A04 Insecure Design; OWASP API Security: Mass Assignment
+
+## API_RATE_LIMIT_MISSING_PUBLIC
+**Title:** Public API route may be missing rate limiting
+**Category:** api
+**Severity:** medium
+**Risk:** Endpoints without any rate limiting are vulnerable to scraping, credential stuffing, and cost-driving abuse at scale.
+**Recommendation:** Add per-IP and per-account rate limiting (e.g. Upstash, express-rate-limit, a WAF rule) to public-facing API routes.
+**Standards:** OWASP API Security: Unrestricted Resource Consumption
+
+## GRAPHQL_INTROSPECTION_ENABLED
+**Title:** GraphQL introspection may be enabled in production
+**Category:** api
+**Severity:** medium
+**Risk:** Introspection lets attackers enumerate your entire schema, including fields and mutations not exposed in your app's UI.
+**Recommendation:** Disable introspection (and the GraphiQL/Playground UI) outside of development environments.
+**Standards:** OWASP API Security: Security Misconfiguration

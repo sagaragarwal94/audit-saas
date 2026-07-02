@@ -1,13 +1,20 @@
 {
-  "name": "ai-saas-audit-agent",
+  "name": "auditsaas",
   "version": "0.1.0",
-  "description": "Local-first audit CLI for AI SaaS security, privacy, scalability, payments, and production readiness.",
+  "description": "Open-source local CLI for SaaS security, privacy, AI, payments, and production readiness audits.",
   "type": "module",
   "bin": {
     "saas-audit": "./bin/saas-audit.js"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "rules/",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
   "scripts": {
-    "dev:web": "node ./web/server.js",
     "scan": "node ./bin/saas-audit.js scan .",
     "test": "node --test test/*.test.js",
     "fixture:scan": "node ./bin/saas-audit.js scan ./test/fixtures/vulnerable-app --out-dir ./test-output"
@@ -21,11 +28,8 @@
     "openai",
     "stripe"
   ],
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=20"
-  },
-  "dependencies": {
-    "@revenuecat/purchases-js": "^1.41.1"
   }
 }

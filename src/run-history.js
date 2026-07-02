@@ -4,7 +4,7 @@ import path from "node:path";
 export async function appendRunHistory({ projectDir, runId, projectName, target, focus, url, summary, reportPath }) {
   await fs.mkdir(projectDir, { recursive: true });
   await fs.appendFile(
-    path.join(projectDir, "gravel-run-history.md"),
+    path.join(projectDir, "auditsaas-run-history.md"),
     formatRunHistoryEntry({ runId, projectName, target, focus, url, summary, reportPath }),
   );
 }

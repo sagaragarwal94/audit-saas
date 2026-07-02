@@ -1,7 +1,9 @@
 node_modules/
 .env
+.env.local
 audit-output/
 test-output/
-web/data/
+auditsaas-run-history.md
+.release/
 .DS_Store
 npm-debug.log*

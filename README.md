@@ -1,146 +1,29 @@
-# AI SaaS Audit Agent
+# AuditSaas
 
-Local-first CLI that audits AI-powered SaaS applications for security, privacy, architecture, scalability, payments, AI cost risks, production readiness, and post-deploy monitoring gaps.
+Open-source local CLI that audits SaaS applications for security, privacy, AI, payments, production readiness, and launch-risk gaps.
+
+AuditSaas runs on your machine, scans your project files locally, and writes reports into your repo. No dashboard, account, license key, Auth0, RevenueCat, or hosted backend is required.
 
 ## Quick Start
 
 ```bash
 npm install
 npm test
-npm run fixture:scan
 node ./bin/saas-audit.js scan /path/to/app --out-dir ./audit-output
 ```
 
-No external service is required for the MVP. The scanner runs locally and writes deliverables to disk.
-
-## Gravel Homepage
+Or run against the included vulnerable fixture:
 
 ```bash
-npm run dev:web
+npm run fixture:scan
 ```
-
-The local homepage and customer dashboard run at `http://127.0.0.1:4000`.
-
-Copy `.env.example` to `.env` and provide the values:
-
-- `APP_BASE_URL`
-- `SESSION_SECRET`
-- `AUTH0_SECRET`
-- `AUTH0_DOMAIN`
-- `AUTH0_CLIENT_ID`
-- `AUTH0_CLIENT_SECRET`
-- `REVENUECAT_API_KEY`
-- `REVENUECAT_ENTITLEMENT_ID`
-- `REVENUECAT_OFFERING_ID`
-- `REVENUECAT_STARTER_PACKAGE_ID`
-- `REVENUECAT_PRO_PACKAGE_ID`
-- `REVENUECAT_WEBHOOK_SECRET`
-- `CLI_DOWNLOAD_URL`
-
-Auth0 handles signup, login, logout, and the protected dashboard. Set the Auth0
-application callback URL to `/auth/callback` and the logout URL to `/`.
-`AUTH0_CALLBACK_URL` is optional; when omitted, the app derives it from
-`APP_BASE_URL`.
-
-If Auth0 redirects back with an error such as `Cannot read properties of
-undefined (reading 'scope')`, the failure is happening inside Auth0 before the
-app receives a login code. Check Auth0 Dashboard > Monitoring > Logs for the
-failed transaction, then inspect Actions > Flows > Login and any legacy Rules.
-Temporarily disable custom Actions/Rules to confirm the base application login
-works with the requested `openid profile email` scope.
-
-RevenueCat checkout is triggered from the dashboard after login. The app uses
-the RevenueCat Web SDK with `REVENUECAT_API_KEY`, passes the signed-in Gravel
-user id as the RevenueCat App User ID, and presents your configured RevenueCat
-paywall/current offering. Package and offering ids are optional; add them later
-only if you want the Starter and Pro buttons to target specific packages.
-
-For checkout to open, RevenueCat must have a web billing engine configured and
-the current offering must have a web paywall attached. If `REVENUECAT_OFFERING_ID`
-is set, that offering id must exist; otherwise the app uses RevenueCat's current
-offering. If `REVENUECAT_PRO_PACKAGE_ID` or `REVENUECAT_STARTER_PACKAGE_ID` is
-set, the package id must exist inside the chosen offering.
-
-The one-audit trial is enforced in the web backend. A user can start one trial
-scan; once a scan is marked completed, additional scans require an active
-RevenueCat entitlement. Configure RevenueCat webhooks to mark the backend
-subscription active after purchase:
-
-```text
-POST /api/revenuecat/webhook
-Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET>
-```
-
-The CLI reports run progress with the user's dashboard license token:
-
-```bash
-curl -X POST http://127.0.0.1:4000/api/cli/runs/<run_id>/progress \
-  -H "authorization: Bearer <license_token>" \
-  -H "content-type: application/json" \
-  -d '{"status":"running","percentComplete":68,"currentStep":"Checking payments","findingsCount":7}'
-```
-
-## CLI Licensing Flow
-
-Download the CLI tarball from the authenticated dashboard, install it into a
-user-owned system path, and then run `saas-audit` from any project folder.
-
-```bash
-node --version # Node.js 20+
-mkdir -p ~/.npm-global
-npm config set prefix ~/.npm-global
-export PATH="$HOME/.npm-global/bin:$PATH"
-npm install -g ~/Downloads/ai-saas-audit-agent-*.tgz
-saas-audit login
-saas-audit whoami
-cd /path/to/project
-saas-audit scan . --name "My App" --out-dir ./audit-output
-```
-
-The CLI uses `GRAVEL_API_BASE` to find the Gravel web app and stores the approved
-license token in `~/.gravel/config.json`. `GRAVEL_LICENSE_TOKEN` overrides the
-stored token for CI or scripted runs.
-
-Optional AI reviewer:
-
-```bash
-export GRAVEL_LLM_API_KEY=your-provider-key
-export GRAVEL_LLM_MODEL=gpt-4.1-mini
-export GRAVEL_LLM_BASE_URL=https://api.openai.com/v1
-saas-audit scan . --out-dir ./audit-output
-```
-
-When these local variables are present, the CLI runs an OpenAI-compatible AI
-review after the deterministic scanner. Full source code and LLM keys stay on
-the user's machine; Gravel sends only compact finding summaries and redacted
-evidence snippets to the configured provider. Use `--no-ai-review` or
-`GRAVEL_AI_REVIEW=false` to skip it. Use `--ai-model <model>` to override the
-model for one run.
-
-The dashboard shows linked CLI devices after browser login approval, plus
-macOS, Windows, and Linux Node.js install commands.
-
-Use `--name`, `--project-name`, or `--app-name` to control the app name shown in
-dashboard analytics. If omitted, Gravel uses the scanned folder name.
-
-Free tier rules:
-
-- The first successfully completed project run is free.
-- Failed or abandoned runs do not consume the free run.
-- After the free completed run, the CLI receives a `402` response with the
-  billing URL until RevenueCat marks the user subscription active.
-
-The dashboard Analytics section shows plan status, free-run usage, run counts,
-findings severity totals, latest run, and project run history.
-
-For `trygravel.com`, deploy the `web/` app to a Node host because Auth0
-callbacks, sessions, scan progress, and RevenueCat webhooks are handled by
-`web/server.js`. Then point the domain DNS records at that provider.
 
 ## CLI
 
 ```bash
+saas-audit --version
 saas-audit scan .
+saas-audit scan . --name "My App"
 saas-audit scan . --out-dir ./audit-output
 saas-audit scan . --focus security
 saas-audit scan . --focus privacy
@@ -151,40 +34,90 @@ saas-audit scan . --url https://app.example.com
 
 ## Deliverables
 
+Each scan writes:
+
 - `audit-report.md`
 - `findings.json`
+- `findings.sarif.json` (SARIF 2.1.0, for GitHub code scanning and other CI tooling)
 - `priority-action-plan.md`
 - `privacy-policy-draft.md`
 - `data-inventory.md`
 - `production-readiness-checklist.md`
-- `ai-review.md` when local LLM reviewer config is present
+- `auditsaas-run-history.md` in the scanned project
+- `ai-review.md` when local AI reviewer config is enabled
 
-## Current MVP Coverage
+## Optional AI Review
 
-- Framework/provider detection for common SaaS stacks
-- Auth security checks: password hashing, login rate limits, session expiry, cookie flags
-- Authorization and IDOR checks
-- API security checks
-- SQL injection and XSS pattern checks
-- Secrets and `.env` exposure checks
-- Frontend API key exposure checks
-- Stripe webhook security checks
-- OpenAI/AI cost and abuse checks
-- Privacy/data collection inventory
-- Privacy policy draft generation
-- Security headers and HTTPS scan for deployed URLs
-- Logging, redaction, and anomaly detection recommendations
-- OWASP mapping and prioritized action plan
+The deterministic scanner does not need external services. If you want an OpenAI-compatible second-pass review, set:
 
-## Environment Needed
+```bash
+export AUDITSAAS_LLM_API_KEY=your-provider-key
+export AUDITSAAS_LLM_MODEL=gpt-4.1-mini
+export AUDITSAAS_LLM_BASE_URL=https://api.openai.com/v1
+saas-audit scan . --out-dir ./audit-output
+```
 
-For the local MVP you only need:
+Use `--no-ai-review` or `AUDITSAAS_AI_REVIEW=false` to skip it. Full source code and keys stay on your machine; the AI reviewer sends only compact, redacted finding context to the configured provider.
 
-- Node.js 20+
-- npm 10+
+## Rule Contributions
 
-Optional external tools to add later:
+Rules live in Markdown under `rules/` and are grouped by category. Add or edit rule files there, then run:
 
-- `gitleaks` or `trufflehog` for deeper secret scanning
-- `semgrep` for custom static analysis rules
-- `osv-scanner` for dependency vulnerabilities
+```bash
+npm test
+npm run fixture:scan
+```
+
+Good rule contributions include:
+
+- A clear risk statement.
+- Practical evidence patterns.
+- A concrete recommendation.
+- A mapping to an existing category such as auth, API, payments, privacy, AI, headers, logging, secrets, database, or XSS.
+
+## Current Coverage
+
+46 rules across 20 categories:
+
+- Framework/provider detection for common SaaS stacks.
+- Auth security checks: password hashing, login rate limits, session expiry, cookie flags.
+- Authorization and IDOR checks.
+- API security checks: missing auth, missing validation, open redirects, mass assignment, missing rate limiting, GraphQL introspection.
+- SQL injection and XSS pattern checks.
+- CORS misconfiguration: wildcard-with-credentials and reflected-origin checks.
+- SSRF checks on server-side fetches built from user input.
+- JWT checks: unpinned algorithms and weak/hardcoded signing secrets.
+- CSRF protection checks for cookie-session apps.
+- Dependency checks: missing lockfile, wildcard versions, known deprecated/risky packages.
+- File upload checks: unrestricted file type/size, path traversal on write.
+- Admin/debug surface checks: admin routes without role checks, exposed debug/internal endpoints.
+- Infra checks: Dockerfiles running as root, database ports exposed in compose files.
+- Supabase Row Level Security confirmation.
+- CI/CD workflow secret exposure checks.
+- Dynamic code execution (eval/exec) near user input.
+- Secrets and `.env` exposure checks.
+- Frontend API key exposure checks.
+- Stripe webhook signature and idempotency checks.
+- OpenAI/AI cost and abuse checks, prompt-injection review.
+- Privacy/data collection inventory, deletion-path, and tracking-consent checks.
+- Privacy policy draft generation.
+- Security headers and HTTPS scan for deployed URLs.
+- Logging, redaction, and anomaly detection recommendations.
+- OWASP mapping and prioritized action plan.
+
+## Development
+
+```bash
+npm install
+npm test
+npm run scan
+```
+
+Package contents are limited with the `files` allowlist in `package.json`.
+
+## License
+
+Apache-2.0. See `LICENSE`.
+
+The AuditSaas name, logos, and related branding are not licensed for confusing
+commercial use. See `NOTICE`.
