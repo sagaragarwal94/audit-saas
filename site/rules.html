@@ -54,13 +54,17 @@
         <div class="rule"><div class="rule-head"><h3>AUTH_SESSION_EXPIRY_MISSING</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Long-lived or unbounded sessions increase impact after token theft.</p><p><strong>Fix:</strong> Configure bounded session expiry, refresh-token rotation, and server-side logout invalidation.</p></div>
       </div>
 
-      <div class="locked-rules" aria-hidden="true">
-        <div class="rule ghost-rule"><div class="rule-head"><h3>████████_████████</h3><span class="sev critical">critical</span></div><p>████████████████████████████████████████████████████████</p><p>████████████████████████████████████████</p></div>
-        <div class="rule ghost-rule"><div class="rule-head"><h3>████_███████_██████</h3><span class="sev high">high</span></div><p>████████████████████████████████████████████████████</p><p>████████████████████████████████████████████</p></div>
-        <div class="rule ghost-rule"><div class="rule-head"><h3>███████_██████████</h3><span class="sev medium">medium</span></div><p>██████████████████████████████████████████</p><p>████████████████████████████████████</p></div>
-        <div class="rule ghost-rule"><div class="rule-head"><h3>████████████_███████</h3><span class="sev critical">critical</span></div><p>████████████████████████████████████████████</p><p>██████████████████████████████████</p></div>
-        <div class="rule ghost-rule"><div class="rule-head"><h3>███_████████████</h3><span class="sev medium">medium</span></div><p>████████████████████████████████████████</p><p>████████████████████████████████████████████</p></div>
-        <div class="rule ghost-rule"><div class="rule-head"><h3>██████_██████_███████</h3><span class="sev high">high</span></div><p>██████████████████████████████████████</p><p>████████████████████████████████</p></div>
+      <div class="locked-rules">
+        <div class="locked-fade" aria-hidden="true">
+          <div class="rule"><div class="rule-head"><h3>SQL_INJECTION_RAW_QUERY</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> String-built SQL can allow attackers to read, modify, or delete database data.</p><p><strong>Fix:</strong> Use parameterized queries or ORM query builders.</p></div>
+          <div class="rule"><div class="rule-head"><h3>PAYMENT_STRIPE_WEBHOOK_SIGNATURE_MISSING</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Attackers may forge payment events and unlock paid features or alter subscription state.</p><p><strong>Fix:</strong> Verify signatures with the raw request body before processing events.</p></div>
+          <div class="rule"><div class="rule-head"><h3>JWT_ALGORITHM_NOT_ENFORCED</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Verifying tokens without pinning the algorithm allows algorithm-confusion attacks.</p><p><strong>Fix:</strong> Always pass an explicit algorithms allowlist to <code>jwt.verify</code>.</p></div>
+          <div class="rule"><div class="rule-head"><h3>AI_FRONTEND_OR_UNBOUNDED</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Unprotected AI calls can leak API keys, enable abuse, and burn API spend quickly.</p><p><strong>Fix:</strong> Keep AI keys server-side and enforce per-user rate limits.</p></div>
+          <div class="rule"><div class="rule-head"><h3>SSRF_UNVALIDATED_URL_FETCH</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Fetching a URL built from request input lets an attacker reach internal services or metadata endpoints.</p><p><strong>Fix:</strong> Validate outbound URLs against an allowlist of hosts.</p></div>
+          <div class="rule"><div class="rule-head"><h3>MASS_ASSIGNMENT_RISK</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Spreading the raw request body into a database write lets attackers set fields like <code>role</code>.</p><p><strong>Fix:</strong> Explicitly allowlist the fields copied into writes.</p></div>
+          <div class="rule"><div class="rule-head"><h3>CORS_WILDCARD_WITH_CREDENTIALS</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> A wildcard origin combined with credentials lets any site read authenticated responses.</p><p><strong>Fix:</strong> Use an explicit allowlist of trusted origins.</p></div>
+          <div class="rule"><div class="rule-head"><h3>INFRA_DB_PORT_EXPOSED</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Publishing database ports beyond the internal network can expose data stores to the internet.</p><p><strong>Fix:</strong> Remove public port mappings for data stores.</p></div>
+        </div>
         <div class="locked-overlay">
           <p class="locked-count">+43 more rules</p>
           <p class="locked-copy">CORS, SSRF, JWT, CSRF, dependency, file-upload, admin/debug, infra, and code-execution checks — unlocked for invited beta testers.</p>
