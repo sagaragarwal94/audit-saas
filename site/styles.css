@@ -298,9 +298,16 @@ html[data-theme="light"] .theme-toggle .icon-dark { display: inline; }
 
 /* Footer */
 .footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--muted); font-size: 0.86rem; }
-.footer-inner { display: flex; justify-content: space-between; }
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
 .footer a { text-decoration: none; }
 .footer a:hover { color: var(--text); }
+.footer-links { display: flex; flex-wrap: wrap; gap: 18px; }
 
 /* Rules page */
 .rules-hero { padding: 72px 0 48px; }
@@ -398,6 +405,63 @@ html[data-theme="light"] .theme-toggle .icon-dark { display: inline; }
   max-width: 480px;
   margin: 0 0 20px;
   font-size: 0.92rem;
+}
+
+/* Doc pages: FAQ, Privacy, Terms, Security */
+.doc-hero { padding: 72px 0 32px; }
+.doc-hero h1 {
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+  line-height: 1.15;
+  margin: 0 0 8px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.doc-updated {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 0 0 40px;
+}
+.doc { padding-bottom: 96px; }
+.doc .wrap { max-width: 760px; }
+.prose h2 {
+  font-size: 1.25rem;
+  margin: 40px 0 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.prose h2:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.prose p, .prose li {
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+.prose p { margin: 0 0 16px; }
+.prose ul { margin: 0 0 16px; padding-left: 22px; }
+.prose li { margin-bottom: 6px; }
+.prose strong { color: var(--text); }
+.prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+.faq-item {
+  border-bottom: 1px solid var(--border);
+  padding: 22px 0;
+}
+.faq-item:first-child { padding-top: 0; }
+.faq-item h3 {
+  margin: 0 0 8px;
+  font-size: 1.02rem;
+}
+.faq-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+.faq-item p + p { margin-top: 10px; }
+.faq-item code {
+  background: var(--inline-code-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
 }
 
 @media (max-width: 860px) {

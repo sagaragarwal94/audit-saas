@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FAQ — AuditSaas</title>
+<meta name="description" content="Common questions about AuditSaas: what it checks, whether your code ever leaves your machine, how the private beta works, and how to get access." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="AuditSaas" />
+<meta property="og:title" content="AuditSaas FAQ" />
+<meta property="og:description" content="Common questions about AuditSaas: what it checks, whether your code ever leaves your machine, how the private beta works, and how to get access." />
+<meta property="og:url" content="https://auditsaas.org/faq" />
+<meta property="og:image" content="https://auditsaas.org/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="AuditSaas FAQ" />
+<meta name="twitter:description" content="What it checks, whether your code ever leaves your machine, and how to get beta access." />
+<meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  (function () {
+    var stored = localStorage.getItem("theme");
+    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="/" class="brand">Audit<span>Saas</span></a>
+    <div class="nav-right">
+      <nav class="nav-links">
+        <a href="/#features">Features</a>
+        <a href="/rules">Rules</a>
+        <a href="/faq">FAQ</a>
+        <a href="/#waitlist">Join Waitlist</a>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
+        <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="doc-hero">
+    <div class="wrap">
+      <p class="eyebrow">FAQ</p>
+      <h1>Frequently asked questions</h1>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="wrap">
+
+      <div class="faq-item">
+        <h3>What is AuditSaas?</h3>
+        <p>A local CLI that scans a codebase for security, privacy, AI-abuse, payments, and production-readiness gaps — the kind of issues AI coding assistants (Cursor, Claude Code, v0, Lovable, Bolt, etc.) tend to skip. It runs 46 rules across 20 categories and writes the results as Markdown and JSON reports directly into your project.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Does my code ever leave my machine?</h3>
+        <p>No, not by default. The core scanner reads your files locally and never makes a network call. The only exception is the optional AI second-pass review, which is off unless you explicitly configure it — and even then you can point it at a local model (Ollama, LM Studio) instead of a hosted API, so nothing has to leave your machine even with AI review on.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Why is it invite-only right now?</h3>
+        <p>AuditSaas is in private beta. We're still tightening false-positive rates and expanding rule coverage, and we'd rather do that with a smaller group of real users giving direct feedback than with an open public launch.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How do I get access?</h3>
+        <p>Request access via the <a href="/#waitlist">waitlist form</a>. Once approved, we'll email you an install package — no GitHub account or repo access needed for most testers.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>What do I get after I'm approved?</h3>
+        <p>An <code>auditsaas-&lt;version&gt;.tgz</code> file by email. Install it with <code>npm install -g auditsaas-&lt;version&gt;.tgz</code>, then run <code>saas-audit scan .</code> in any project. That's the whole setup.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>What does it actually check?</h3>
+        <p>Auth (password hashing, login rate limits, session expiry, cookie flags), authorization/IDOR, API validation, SQL injection and XSS, secrets exposure, CORS/SSRF/CSRF, JWT misconfiguration, dependency and supply-chain risk, file upload handling, admin/debug surface exposure, infra misconfiguration, Stripe webhook signature and idempotency checks, AI/LLM cost and prompt-injection exposure, and privacy/data-collection inventory with policy drafting. See the <a href="/rules">rule catalog</a> for examples.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Is it free?</h3>
+        <p>Yes, during the private beta — there's no pricing yet. When AuditSaas exits beta, expect a free tier plus paid tiers for full rule coverage and team use; beta testers will be grandfathered in.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Will this replace a real security audit or pentest?</h3>
+        <p>No. AuditSaas is a fast, automated first pass that catches common, well-understood mistakes before they ship. It's a complement to (not a replacement for) a professional security review, especially for anything handling sensitive data at scale.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>I think a finding is wrong (false positive/negative) — what do I do?</h3>
+        <p>Reply to your invite email or reach out at <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a> with the rule ID and a bit of context. False-positive reports are exactly what the beta is for.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>I found a security issue in AuditSaas itself — how do I report it?</h3>
+        <p>See our <a href="/security">security and disclosure page</a> for how to report it responsibly.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Is AuditSaas open source?</h3>
+        <p>Not currently — it's a private beta under an all-rights-reserved license (see <a href="/terms">Terms</a>). This may change after the beta period.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>What frameworks and stacks does it understand?</h3>
+        <p>It auto-detects common SaaS stacks: Next.js/Remix/Express/Fastify, Clerk/NextAuth/Supabase Auth/Firebase Auth, Prisma/Drizzle/Supabase/Mongo/Postgres/MySQL, Stripe/Paddle/Lemon Squeezy, and OpenAI/Anthropic/Gemini/LangChain/Vercel AI SDK — then only runs the relevant rules.</p>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span>© 2026 AuditSaas · Private beta</span>
+    <nav class="footer-links">
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("theme", next);
+  });
+</script>
+</body>
+</html>

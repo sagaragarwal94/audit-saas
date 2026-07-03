@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Policy — AuditSaas</title>
+<meta name="description" content="What AuditSaas collects (almost nothing), what the CLI does with your code (nothing leaves your machine by default), and how the waitlist form data is handled." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="AuditSaas" />
+<meta property="og:title" content="AuditSaas Privacy Policy" />
+<meta property="og:description" content="What AuditSaas collects (almost nothing), what the CLI does with your code, and how waitlist form data is handled." />
+<meta property="og:url" content="https://auditsaas.org/privacy" />
+<meta property="og:image" content="https://auditsaas.org/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="AuditSaas Privacy Policy" />
+<meta name="twitter:description" content="What AuditSaas collects (almost nothing) and how waitlist form data is handled." />
+<meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  (function () {
+    var stored = localStorage.getItem("theme");
+    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="/" class="brand">Audit<span>Saas</span></a>
+    <div class="nav-right">
+      <nav class="nav-links">
+        <a href="/#features">Features</a>
+        <a href="/rules">Rules</a>
+        <a href="/faq">FAQ</a>
+        <a href="/#waitlist">Join Waitlist</a>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
+        <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="doc-hero">
+    <div class="wrap">
+      <p class="eyebrow">Legal</p>
+      <h1>Privacy Policy</h1>
+      <p class="doc-updated">Last updated: July 2026</p>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="wrap prose">
+
+      <h2>The short version</h2>
+      <p>The AuditSaas CLI reads your code locally and never sends it anywhere by default. The only thing we collect as a company is what you voluntarily submit through our beta waitlist form (your email and, optionally, a few details about your project) — nothing else, no analytics, no cookies, no tracking scripts on this site.</p>
+
+      <h2>What the CLI does with your code</h2>
+      <p>When you run <code>saas-audit scan</code>, it reads files on your machine, evaluates them against local detection rules, and writes report files (Markdown/JSON) back into your project directory. No file contents, findings, or metadata are transmitted anywhere unless you explicitly enable the optional AI review feature.</p>
+      <p>If you do enable AI review (by setting <code>AUDITSAAS_LLM_API_KEY</code> or <code>AUDITSAAS_LLM_BASE_URL</code>), the CLI sends only a compact, redacted summary of findings — not your source code — to the endpoint you configured. That endpoint can be a hosted provider using your own API key, or a fully local model server (Ollama, LM Studio) that never leaves your machine at all. We (AuditSaas) never see this data either way; it goes directly from your machine to the endpoint you chose.</p>
+
+      <h2>What this website collects</h2>
+      <p>auditsaas.org does not use cookies, analytics, or any tracking scripts. We don't know who visits this site or what pages they view.</p>
+      <p>The only data we receive is what you submit through the beta waitlist form, hosted by Tally (see below): your email address and any optional answers you provide (project description, tech stack, how you build, feedback). We use this solely to:</p>
+      <ul>
+        <li>Decide who to invite to the private beta and in what order</li>
+        <li>Send you an invite, install instructions, and beta-related communication</li>
+        <li>Understand who's interested in AuditSaas and why, to prioritize the product roadmap</li>
+      </ul>
+      <p>We do not sell this data or share it with third parties for marketing purposes.</p>
+
+      <h2>Third-party processors</h2>
+      <p>A few services help operate this site and the beta, and each handles data under their own privacy policy:</p>
+      <ul>
+        <li><strong>Tally</strong> — processes and stores waitlist form submissions.</li>
+        <li><strong>Vercel</strong> — hosts this static website.</li>
+        <li><strong>Cloudflare</strong> — provides CDN/DNS in front of the site.</li>
+        <li><strong>Your email provider</strong> — used to deliver beta invites and communication.</li>
+      </ul>
+      <p>None of these services receive your source code or scan results — those never leave your machine unless you configure AI review yourself, as described above.</p>
+
+      <h2>Data retention</h2>
+      <p>We keep waitlist submissions for as long as the private beta is running, or until you ask us to delete them. Once AuditSaas has a public launch and pricing, we'll update this policy to cover account and billing data at that point.</p>
+
+      <h2>Your choices</h2>
+      <p>You can ask us to access, correct, or delete any data we hold about you at any time by emailing <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a>.</p>
+
+      <h2>Children's privacy</h2>
+      <p>AuditSaas is not directed at children under 16, and we do not knowingly collect data from them.</p>
+
+      <h2>Changes to this policy</h2>
+      <p>We'll update this page as the product changes, especially around the public launch and the introduction of paid plans (which will involve a payment processor such as Stripe — we will never store your card details ourselves). Material changes will be reflected in the "Last updated" date above.</p>
+
+      <h2>Contact</h2>
+      <p>Questions about this policy: <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a>.</p>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span>© 2026 AuditSaas · Private beta</span>
+    <nav class="footer-links">
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("theme", next);
+  });
+</script>
+</body>
+</html>

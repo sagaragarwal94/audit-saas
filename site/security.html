@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Security &amp; Disclosure — AuditSaas</title>
+<meta name="description" content="How to report a security issue in AuditSaas or auditsaas.org, and what to expect from us in response." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="AuditSaas" />
+<meta property="og:title" content="AuditSaas Security &amp; Responsible Disclosure" />
+<meta property="og:description" content="How to report a security issue in AuditSaas or auditsaas.org, and what to expect from us in response." />
+<meta property="og:url" content="https://auditsaas.org/security" />
+<meta property="og:image" content="https://auditsaas.org/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="AuditSaas Security &amp; Responsible Disclosure" />
+<meta name="twitter:description" content="How to report a security issue in AuditSaas or auditsaas.org." />
+<meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  (function () {
+    var stored = localStorage.getItem("theme");
+    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="/" class="brand">Audit<span>Saas</span></a>
+    <div class="nav-right">
+      <nav class="nav-links">
+        <a href="/#features">Features</a>
+        <a href="/rules">Rules</a>
+        <a href="/faq">FAQ</a>
+        <a href="/#waitlist">Join Waitlist</a>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
+        <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="doc-hero">
+    <div class="wrap">
+      <p class="eyebrow">Security</p>
+      <h1>Security &amp; responsible disclosure</h1>
+      <p class="doc-updated">Last updated: July 2026</p>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="wrap prose">
+
+      <h2>Reporting a vulnerability</h2>
+      <p>If you find a security issue in the AuditSaas CLI, in this website, or in how the beta is distributed, please report it privately to <a href="mailto:security@auditsaas.org">security@auditsaas.org</a> before disclosing it publicly. Include:</p>
+      <ul>
+        <li>What you found and where (CLI, website, a specific rule, the install package)</li>
+        <li>Steps to reproduce, or a proof of concept</li>
+        <li>What you think the impact is</li>
+      </ul>
+      <p>We'll acknowledge reports within a few business days and keep you updated as we investigate and fix the issue. We ask that you give us reasonable time to fix a confirmed issue before any public disclosure.</p>
+
+      <h2>What's in scope</h2>
+      <ul>
+        <li>The AuditSaas CLI source and its distributed install package</li>
+        <li>auditsaas.org (this website)</li>
+        <li>The beta waitlist form and invite/distribution process</li>
+      </ul>
+
+      <h2>What's out of scope</h2>
+      <ul>
+        <li>False positives/negatives in scan results — please report those to <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a> instead, as product feedback rather than a security report.</li>
+        <li>Third-party services we rely on (Tally, Vercel, Cloudflare) — please report those directly to the respective provider.</li>
+      </ul>
+
+      <h2>A note on trust</h2>
+      <p>AuditSaas runs locally against your codebase, so we take its own security seriously — a vulnerability in the tool itself would undermine the reason to use it. If you're auditing the CLI's source as part of your own due diligence before running it, we'd genuinely like to hear what you find, positive or negative.</p>
+
+      <h2>Machine-readable disclosure</h2>
+      <p>A <a href="/.well-known/security.txt">/.well-known/security.txt</a> file (RFC 9116) is also published for automated tooling.</p>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span>© 2026 AuditSaas · Private beta</span>
+    <nav class="footer-links">
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("theme", next);
+  });
+</script>
+</body>
+</html>
