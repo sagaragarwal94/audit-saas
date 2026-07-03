@@ -51,7 +51,7 @@
       </div>
       <div class="code-block hero-code">
         <div class="code-head"><span></span><span></span><span></span></div>
-        <pre><code>$ npx auditsaas scan .
+        <pre><code>$ saas-audit scan .
 
   ✔ scanned 214 files in 1.8s
   ✖ 3 critical   ✖ 7 high   ⚠ 12 medium
@@ -116,18 +116,18 @@
     <div class="wrap install-inner">
       <div>
         <h2>Get started in under a minute</h2>
-        <p class="section-sub">AuditSaas is invite-only right now. Once you're in, point it at any project — it reads your code, writes Markdown and JSON reports into your repo, and does nothing else.</p>
+        <p class="section-sub">AuditSaas is invite-only right now. Request access above, and we'll email you an install package — no git clone, no build step, no account to create.</p>
         <ul class="checklist">
           <li>Works on any Node.js codebase, no config required</li>
           <li>Optional second-pass AI review with your own API key</li>
-          <li>Rules are plain Markdown — contribute your own</li>
+          <li>Full reports written straight into your project</li>
         </ul>
       </div>
       <div class="code-block">
         <div class="code-head"><span></span><span></span><span></span></div>
-        <pre><code>npm install
-npm test
-node ./bin/saas-audit.js scan /path/to/app --out-dir ./audit-output
+        <pre><code># after your invite email arrives
+npm install -g auditsaas-&lt;version&gt;.tgz
+saas-audit scan /path/to/app --out-dir ./audit-output
 
 # or focus on one category
 saas-audit scan . --focus security

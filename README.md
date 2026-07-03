@@ -8,27 +8,25 @@ AuditSaas runs on your machine, scans your project files locally, and writes rep
 
 ## Beta Access
 
-AuditSaas is currently invite-only. If you were invited to test it:
+AuditSaas is currently invite-only. Request access at [auditsaas.org](https://auditsaas.org) (or directly via the [beta form](https://tally.so/r/KYgbOk)).
 
-1. Accept the collaborator/repo invite you received by email.
-2. Clone the repo and follow Quick Start below.
-3. Send feedback, bugs, and false positives/negatives to the contact in your invite email.
+Once approved, you'll get one of two things by email, depending on how you're testing:
 
-Not invited yet? Join the waitlist at [auditsaas.org](https://auditsaas.org).
+- **Most testers:** an `auditsaas-<version>.tgz` install package. See Quick Start below — no repo access needed.
+- **Contributors adding rules:** a collaborator invite to this private repo instead. Clone it and follow [Development](#development).
+
+Send feedback, bugs, and false positives/negatives to the contact in your invite email.
 
 ## Quick Start
 
-```bash
-npm install
-npm test
-node ./bin/saas-audit.js scan /path/to/app --out-dir ./audit-output
-```
-
-Or run against the included vulnerable fixture:
+After you receive your install package by email:
 
 ```bash
-npm run fixture:scan
+npm install -g ./auditsaas-<version>.tgz
+saas-audit scan /path/to/app --out-dir ./audit-output
 ```
+
+That's it — `saas-audit` is now available anywhere on your machine. No git clone, no build step.
 
 ## CLI
 
@@ -129,13 +127,18 @@ Good rule contributions include:
 
 ## Development
 
+For collaborators with repo access (not needed if you just want to run scans — see Quick Start):
+
 ```bash
 npm install
 npm test
 npm run scan
+
+# or against the included vulnerable fixture
+npm run fixture:scan
 ```
 
-Package contents are limited with the `files` allowlist in `package.json`.
+Package contents are limited with the `files` allowlist in `package.json`. Run `npm run beta:pack` to build the `.tgz` sent to new testers — it writes to `./dist-beta/` and only ever includes `bin/`, `src/`, `rules/`, `README.md`, `LICENSE`, and `NOTICE`.
 
 ## License
 
