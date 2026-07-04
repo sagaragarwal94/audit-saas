@@ -19,61 +19,47 @@ Where to keep expanding, roughly in priority order:
 
 This is inherently open-ended (a rule catalog for a security scanner never reaches "done"), which is actually a good thing for pricing: it means there's a durable reason to keep the product up to date, not a one-time build.
 
-## Pricing model: tiered plans gated by scan volume + rule coverage
+## Pricing model: flat tiers gated by rule coverage only — no scan quotas, no seats
 
-Modeled on how developer-tool APIs like Firecrawl price (a free tier, a small starter tier, a "recommended" middle tier, and a scale tier, all billed monthly or discounted yearly) — but adapted to this product's actual unit of value. Firecrawl meters *pages scraped*; the equivalent unit here is **scans run per month**, since that's the action a user actually repeats. Rule coverage becomes the qualitative gate on top, the same way Firecrawl gates concurrency and support tier rather than what a scrape can *do*.
+Earlier drafts of this plan modeled pricing on Firecrawl's scan-credit ladder. Decision: drop that. No scan-based metering and no per-seat pricing — gating on usage volume or headcount adds billing complexity and support friction (users hitting caps mid-audit, seat management for what are mostly solo/small teams) without matching how this audience actually evaluates a security tool: by what it catches, not how many times they ran it. Every tier below gets **unlimited scans and unlimited team members**; the only thing that changes between tiers is rule coverage and support level.
+
+The tier bands below were validated directly with the private-beta waitlist survey ("If this were paid, what would feel fair?" — options were Free only / $9–19/mo / $20–49/mo / a one-time fee / not sure yet). The paid tiers map onto the two price bands that got real signal; "not sure yet" isn't a plan, it's a market-research bucket that just tells us to keep the Free tier generous enough to convert people once they've seen real value.
 
 ### Free — $0/mo
-- **10 scans/month**
 - Only the **secrets + auth** categories active (2 of 23) — enough to produce a real "oh no" moment (a committed `.env`, a missing login rate limit) in under a minute, with an obvious reason to upgrade.
-- 1 project
-- Community support (GitHub issues / Discord, once either exists)
+- Unlimited scans, unlimited projects, unlimited team members
+- Community support
 - No AI review
 
-### Hobby — $15/mo, or $12/mo billed yearly (save $36/yr)
-- **150 scans/month**
+### Pro — $15/mo, or $12/mo billed yearly (save $36/yr) *(the $9–19/mo band)*
 - All 66 rules, all 23 categories
-- 1 project
+- Unlimited scans, unlimited projects, unlimited team members
 - SARIF export for CI
+- AI review enabled (bring your own key, or local LLM)
 - Email support
 
-### Standard — $49/mo, or $39/mo billed yearly (save $120/yr) — *Recommended*
-- **750 scans/month**
-- Everything in Hobby
-- Up to 5 projects
-- AI review enabled (bring your own key, or local LLM — this costs us nothing either way, so it's a feature gate, not a cost-driven one)
+### Business — $35/mo, or $29/mo billed yearly (save $72/yr) *(the $20–49/mo band)* — *Recommended*
+- Everything in Pro
 - Priority access to new rules as they ship
-- Standard support
-
-### Growth — $125/mo, or $99/mo billed yearly (save $312/yr)
-- **3,000 scans/month**
-- Everything in Standard
-- Unlimited projects
-- 5 team seats
-- Priority support
-
-### Scale — $249/mo billed yearly
-- **Unlimited scans**
-- Unlimited seats/projects
 - Custom/internal rule support
-- Dedicated support & SLA
+- Priority support with faster response times
+- Early input into the language/platform roadmap (Python, Java, Kotlin, Swift, Rust, Go, Android/iOS)
 
 ### Enterprise — custom
 - Self-host / on-prem option
 - SSO
-- Custom rule development
-- Bulk discounts, dedicated support & SLA
+- Dedicated custom rule development
+- Dedicated support & SLA, bulk discounts
 
-**Scan credits don't roll over** month to month, matching the convention this model is based on — it keeps the pricing math simple and avoids stockpiling incentives.
-
-### Launch Audit — $79 one-time (sits outside the ladder)
+### Launch Audit — $79 one-time *(the one-time-fee band, sits outside the tier ladder)*
 - One full scan + the generated priority-action-plan + a short async review of the findings.
-- For the founder who wants a single pre-launch gut-check, not a subscription — a meaningful chunk of this audience will pay once and never subscribe. Keep this as a separate one-time SKU, not a tier, since it serves a different buyer intent than the monthly ladder above.
+- For the founder who wants a single pre-launch gut-check, not a subscription — a meaningful chunk of this audience will pay once and never subscribe. Keep this as a separate one-time SKU, not a tier, since it serves a different buyer intent than Pro/Business.
 
 ## Why this shape
 
-- **Scans-as-credits, not pay-per-finding or pay-per-line-of-code**: scans are the unit of value the user actually understands and repeats (run before every deploy, in CI, etc.), same logic as Firecrawl metering pages rather than API calls or bytes.
-- **Rule-category gating on top of volume, not instead of it**: a pure volume gate (e.g. "10 scans free, unlimited if you pay") wouldn't showcase the product's actual differentiator, which is breadth of coverage. A pure feature gate (all scans free, pay for more rules) doesn't scale revenue with usage. Doing both mirrors how Firecrawl gates on pages *and* concurrency/support simultaneously.
+- **No scan quotas**: a security scanner that throttles how often you can check your own code sends the wrong message, and metering adds real engineering (usage tracking, overage handling, "you're out of scans" UX) for a product that costs us nothing per scan to run. Unlimited-scans-on-every-tier is both simpler to build and more honest positioning.
+- **No seat-based pricing**: this audience is mostly solo builders and small teams where "per seat" reads as nickel-and-diming, not enterprise-appropriate segmentation. Gating on rule coverage and support level instead avoids that friction entirely.
+- **Two paid bands, not five**: the waitlist survey gave two real price signals ($9–19 and $20–49). Building more tiers than the data supports is guessing; Pro and Business map directly onto what people said they'd actually pay.
 - **One-time tier survives alongside the ladder**: a lot of solo builders will never subscribe to a security tool but will pay once, right before they post their Show HN. Losing that segment to "subscription only" leaves money on the table, and it costs nothing to keep it as a side offer.
 
 ## Licensing/enforcement approach
@@ -81,19 +67,19 @@ Modeled on how developer-tool APIs like Firecrawl price (a free tier, a small st
 The CLI is plain Node.js source — it can't be meaningfully DRM'd, and trying to would hurt trust with exactly the audience we want (people already skeptical of "vibe-coded SaaS" doing sketchy things with license checks). Treat this like Sentry/PostHog self-host licensing: an honesty-based fence, not a lock.
 
 - **V1 (now, during beta):** no enforcement. Everything is free and fully unlocked for invited testers. Don't build licensing infra yet — there's no signal it's needed until beta feedback validates the product.
-- **V1.5 (at public launch):** CLI reads `AUDITSAAS_LICENSE_KEY` (env var, same pattern as the existing `AUDITSAAS_LLM_*` vars). Server-side, a lightweight endpoint tracks scan-credit usage per key and which rule categories that plan unlocks — no need for a full billing dashboard on day one, just enough state to gate `runRules()` by category and count scans against the monthly credit.
-- **Payments:** Stripe Checkout + Payment Links for the subscription tiers and the one-time Launch Audit. Skip building a custom checkout page; Stripe-hosted pages are enough at this scale.
-- **Key delivery:** Stripe webhook → generate a key → email it. Fully scriptable without a dashboard; a dashboard becomes worth building only once manual key issuance or usage tracking becomes a bottleneck.
+- **V1.5 (at public launch):** CLI reads `AUDITSAAS_LICENSE_KEY` (env var, same pattern as the existing `AUDITSAAS_LLM_*` vars). A lightweight endpoint validates the key and returns which rule categories that plan unlocks — no scan counting needed since there's no volume gate, just a category allowlist to check `runRules()` against.
+- **Payments:** Stripe Checkout + Payment Links for Pro/Business (recurring) and Launch Audit (one-time). Skip building a custom checkout page; Stripe-hosted pages are enough at this scale.
+- **Key delivery:** Stripe webhook → generate a key → email it. Fully scriptable without a dashboard; a dashboard becomes worth building only once manual key issuance becomes a bottleneck.
 
 ## Rollout tied to the current beta
 
 1. **Now:** beta stays fully free/unlocked for all invited testers — the goal right now is feedback, false-positive reduction, and validating which rule categories people actually care about (this directly informs the Free-tier category split above).
-2. **At public launch (HN/PH/Twitter/Reddit):** ship Free + Hobby + Standard alongside the launch posts. Grandfather every beta tester into Standard free for 3–6 months as a thank-you — they're your first testimonials.
-3. **Later, only if demand shows up:** add Growth/Scale once multiple beta testers mention auditing client/agency projects or running AuditSaas across many repos in CI.
+2. **At public launch (HN/PH/Twitter/Reddit):** ship Free + Pro + Business alongside the launch posts. Grandfather every beta tester into Business free for 3–6 months as a thank-you — they're your first testimonials.
+3. **Later, only if demand shows up:** add an Enterprise motion (SSO, self-host, dedicated custom rules) once multiple beta testers mention agency/enterprise procurement requirements.
 
 ## Open questions to decide before public launch
 
-- Confirm the Free-tier category split (secrets + auth) actually produces a compelling "aha" without giving away so much that Hobby feels unnecessary — this is exactly what beta feedback should tell us.
-- Validate the scan-credit numbers above (10 / 150 / 750 / 3,000) against actual beta usage patterns once we have telemetry — these are informed guesses, not measured.
+- Confirm the Free-tier category split (secrets + auth) actually produces a compelling "aha" without giving away so much that Pro feels unnecessary — this is exactly what beta feedback should tell us.
+- Watch actual usage patterns post-launch for signs the no-quota model gets abused (e.g. one account running thousands of scans/day) — unlikely given the audience, but worth a lightweight abuse-rate-limit at the infra level even without a billed quota.
 - Decide whether Launch Audit includes a human review call or is fully automated — the call adds trust/conversion but doesn't scale past a handful of customers per week.
 - Decide the real dependency-CVE-lookup build (see "Rule coverage" above) before or after public launch — it's the biggest remaining credibility gap for the security-literate HN audience specifically.

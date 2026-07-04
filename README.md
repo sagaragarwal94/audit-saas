@@ -127,6 +127,12 @@ Good rule contributions include:
 - Logging, redaction, verbose-error/stack-trace exposure, and anomaly detection recommendations.
 - OWASP mapping and prioritized action plan.
 
+## Language & Platform Coverage
+
+**Today:** full-depth JavaScript/TypeScript — Node.js, Next.js, Remix, Express, Fastify, React, Vue — plus Docker, Docker Compose, and Terraform for infra.
+
+**Roadmap** (prioritized by beta feedback, not shipped speculatively): Python, Java, Kotlin, Swift, Rust, Go, native Android/iOS checks, and IaC providers beyond Terraform (Pulumi, CDK, CloudFormation). See `plan.md` for how this is sequenced.
+
 ## Development
 
 For collaborators with repo access (not needed if you just want to run scans — see Quick Start):

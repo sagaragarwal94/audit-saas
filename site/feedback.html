@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Feedback &amp; Feature Requests — AuditSaas</title>
+<meta name="description" content="Report a false positive, request a new rule, or suggest a feature for AuditSaas." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="AuditSaas" />
+<meta property="og:title" content="AuditSaas Feedback &amp; Feature Requests" />
+<meta property="og:description" content="Report a false positive, request a new rule, or suggest a feature for AuditSaas." />
+<meta property="og:url" content="https://auditsaas.org/feedback" />
+<meta property="og:image" content="https://auditsaas.org/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="AuditSaas Feedback &amp; Feature Requests" />
+<meta name="twitter:description" content="Report a false positive, request a new rule, or suggest a feature for AuditSaas." />
+<meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  (function () {
+    var stored = localStorage.getItem("theme");
+    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="/" class="brand">Audit<span>Saas</span></a>
+    <div class="nav-right">
+      <nav class="nav-links">
+        <a href="/#features">Features</a>
+        <a href="/rules">Rules</a>
+        <a href="/faq">FAQ</a>
+        <a href="/#waitlist">Join Waitlist</a>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
+        <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="doc-hero">
+    <div class="wrap">
+      <p class="eyebrow">Feedback</p>
+      <h1>Feedback &amp; feature requests</h1>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="wrap prose">
+      <p>The beta exists to find what's wrong and what's missing before public launch — so if something felt off, or you wanted a check that doesn't exist yet, that's exactly what this is for. Every request gets read; we can't promise every one gets built, but they directly shape what's prioritized next (see the roadmap in the <a href="/#coverage">coverage section</a> and <code>plan.md</code> in the repo).</p>
+
+      <h2>What's useful to include</h2>
+      <ul>
+        <li><strong>False positive/negative:</strong> the rule ID (from <code>findings.json</code>), the file/pattern involved, and why it's wrong.</li>
+        <li><strong>New rule request:</strong> the risk you want caught, and — if you have one — a real (or realistic) code example that should trigger it.</li>
+        <li><strong>Language/platform request:</strong> which of Python, Java, Kotlin, Swift, Rust, Go, Android, or iOS matters most for what you're building.</li>
+        <li><strong>Anything else:</strong> UX friction, confusing report wording, pricing thoughts, whatever got in your way.</li>
+      </ul>
+
+      <div class="waitlist-panel" style="margin: 40px 0;">
+        <a class="btn btn-primary"
+           href="mailto:beta@auditsaas.org?subject=AuditSaas%20feedback&body=Type%20(false%20positive%20%2F%20false%20negative%20%2F%20new%20rule%20%2F%20language%20request%20%2F%20other)%3A%0A%0ADetails%3A%0A%0ARule%20ID%20(if%20applicable)%3A%0A">
+          Send feedback →
+        </a>
+        <p class="waitlist-note">Opens your email client, pre-filled. Or just email <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a> directly in your own words.</p>
+      </div>
+
+      <h2>What happens next</h2>
+      <p>Fixes and new rules that come out of beta feedback get called out in the <a href="/changelog">changelog</a> so you can see what shipped from what you reported.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span>© 2026 AuditSaas · Private beta</span>
+    <nav class="footer-links">
+      <a href="/faq">FAQ</a>
+      <a href="/changelog">Changelog</a>
+      <a href="/feedback">Feedback</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("theme", next);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Changelog — AuditSaas</title>
+<meta name="description" content="What's new in AuditSaas: rule catalog growth, new features, and fixes." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="AuditSaas" />
+<meta property="og:title" content="AuditSaas Changelog" />
+<meta property="og:description" content="What's new in AuditSaas: rule catalog growth, new features, and fixes." />
+<meta property="og:url" content="https://auditsaas.org/changelog" />
+<meta property="og:image" content="https://auditsaas.org/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="AuditSaas Changelog" />
+<meta name="twitter:description" content="What's new in AuditSaas: rule catalog growth, new features, and fixes." />
+<meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  (function () {
+    var stored = localStorage.getItem("theme");
+    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="/" class="brand">Audit<span>Saas</span></a>
+    <div class="nav-right">
+      <nav class="nav-links">
+        <a href="/#features">Features</a>
+        <a href="/rules">Rules</a>
+        <a href="/faq">FAQ</a>
+        <a href="/#waitlist">Join Waitlist</a>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
+        <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="doc-hero">
+    <div class="wrap">
+      <p class="eyebrow">Changelog</p>
+      <h1>What's new</h1>
+      <p class="doc-updated">Have a request? See <a href="/feedback">Feedback &amp; feature requests</a>.</p>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="wrap prose">
+
+      <h2>July 2026</h2>
+      <ul>
+        <li><strong>Rule catalog grew to 66 rules across 23 categories</strong> (from 46/20) — added JWT expiration checks, non-cryptographic token randomness, OAuth CSRF (state parameter), unauthenticated WebSocket handlers, exposed Swagger UI and health-endpoint info leaks, npm install-time script risk, hardcoded cloud credentials, exposed backup files, public Terraform S3 buckets and open security groups, CSP unsafe-inline/eval, exposed production source maps, missing SRI on external scripts, Stripe client-trusted checkout amounts, unbounded list queries, GraphQL depth limiting, and unauthenticated Next.js Server Actions.</li>
+        <li><strong>Light mode</strong> — a theme toggle in the nav, defaulting to your OS preference and remembered across visits.</li>
+        <li><strong>Local-LLM AI review</strong> — point the optional AI review step at a local model server (Ollama, LM Studio) instead of a hosted API key.</li>
+        <li><strong>SARIF export</strong> (<code>findings.sarif.json</code>) for GitHub code scanning and other CI tooling.</li>
+        <li><strong>Reduced false positives</strong> from documentation, test files, and properly gitignored local <code>.env</code> files — behavior-based rules now scope to real application code.</li>
+        <li><strong>FAQ, Privacy Policy, Terms, and Security/disclosure pages</strong> published ahead of public launch.</li>
+      </ul>
+
+      <h2>What's next</h2>
+      <p>Prioritized by beta feedback — see <a href="/feedback">Feedback &amp; feature requests</a> to weigh in, and the "Today, and where it's headed" section on the <a href="/#coverage">homepage</a> for the current roadmap (Python, Java, Kotlin, Swift, Rust, Go, Android/iOS, and real dependency CVE lookup).</p>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span>© 2026 AuditSaas · Private beta</span>
+    <nav class="footer-links">
+      <a href="/faq">FAQ</a>
+      <a href="/changelog">Changelog</a>
+      <a href="/feedback">Feedback</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("theme", next);
+  });
+</script>
+</body>
+</html>
