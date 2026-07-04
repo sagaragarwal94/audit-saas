@@ -57,3 +57,19 @@
 **Risk:** Introspection lets attackers enumerate your entire schema, including fields and mutations not exposed in your app's UI.
 **Recommendation:** Disable introspection (and the GraphiQL/Playground UI) outside of development environments.
 **Standards:** OWASP API Security: Security Misconfiguration
+
+## GRAPHQL_NO_DEPTH_LIMIT
+**Title:** GraphQL server may be missing query depth/cost limiting
+**Category:** api
+**Severity:** medium
+**Risk:** Without a depth or cost limit, a single deeply nested or highly repetitive GraphQL query can exhaust server resources — a denial-of-service vector unique to GraphQL's flexible query shape.
+**Recommendation:** Add a depth-limiting or cost-analysis library (e.g. `graphql-depth-limit`, `graphql-cost-analysis`) to the server's validation rules.
+**Standards:** OWASP API Security: Unrestricted Resource Consumption
+
+## NEXTJS_SERVER_ACTION_NO_AUTH
+**Title:** Next.js Server Action may be missing an authentication check
+**Category:** api
+**Severity:** critical
+**Risk:** A `"use server"` action is a public network endpoint even though it's called like a function — without an explicit auth check, anyone who discovers its action ID can invoke it directly, bypassing any UI-level gating.
+**Recommendation:** Verify the session/user at the top of every Server Action that reads or writes sensitive data, exactly as you would in an API route.
+**Standards:** OWASP Top 10: A01 Broken Access Control

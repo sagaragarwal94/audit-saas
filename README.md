@@ -97,32 +97,34 @@ Good rule contributions include:
 
 ## Current Coverage
 
-46 rules across 20 categories:
+66 rules across 23 categories:
 
 - Framework/provider detection for common SaaS stacks.
-- Auth security checks: password hashing, login rate limits, session expiry, cookie flags.
-- Authorization and IDOR checks.
-- API security checks: missing auth, missing validation, open redirects, mass assignment, missing rate limiting, GraphQL introspection.
+- Auth security checks: password hashing, login/password-reset rate limits, session expiry, cookie flags.
+- Authorization and IDOR checks, plus Next.js Server Action auth checks.
+- API security checks: missing auth, missing validation, open redirects, mass assignment, missing rate limiting, unbounded list queries, GraphQL introspection and depth-limiting.
 - SQL injection and XSS pattern checks.
 - CORS misconfiguration: wildcard-with-credentials and reflected-origin checks.
 - SSRF checks on server-side fetches built from user input.
-- JWT checks: unpinned algorithms and weak/hardcoded signing secrets.
-- CSRF protection checks for cookie-session apps.
-- Dependency checks: missing lockfile, wildcard versions, known deprecated/risky packages.
+- JWT checks: unpinned algorithms, missing expiration, and weak/hardcoded signing secrets.
+- CSRF protection checks for cookie-session apps, and OAuth state-parameter checks.
+- WebSocket connection auth checks.
+- Cryptography checks: non-cryptographic random sources used for tokens/secrets.
+- Dependency and supply-chain checks: missing lockfile, wildcard versions, known deprecated/risky packages, install-time scripts.
 - File upload checks: unrestricted file type/size, path traversal on write.
-- Admin/debug surface checks: admin routes without role checks, exposed debug/internal endpoints.
-- Infra checks: Dockerfiles running as root, database ports exposed in compose files.
+- Admin/debug surface checks: admin routes without role checks, exposed debug/internal endpoints, exposed Swagger/API docs UIs, info-leaking health endpoints.
+- Infra checks: Dockerfiles running as root, database ports exposed in compose files, public Terraform S3 buckets, open Terraform security groups.
 - Supabase Row Level Security confirmation.
-- CI/CD workflow secret exposure checks.
+- CI/CD workflow secret exposure checks, hardcoded cloud credentials, and exposed backup/dump files.
 - Dynamic code execution (eval/exec) near user input.
 - Secrets and `.env` exposure checks.
 - Frontend API key exposure checks.
-- Stripe webhook signature and idempotency checks.
+- Stripe webhook signature/idempotency checks, and client-trusted checkout amount checks.
 - OpenAI/AI cost and abuse checks, prompt-injection review.
 - Privacy/data collection inventory, deletion-path, and tracking-consent checks.
 - Privacy policy draft generation.
-- Security headers and HTTPS scan for deployed URLs.
-- Logging, redaction, and anomaly detection recommendations.
+- Security headers, CSP unsafe-inline/eval, missing SRI on external scripts, exposed production source maps, and HTTPS scan for deployed URLs.
+- Logging, redaction, verbose-error/stack-trace exposure, and anomaly detection recommendations.
 - OWASP mapping and prioritized action plan.
 
 ## Development

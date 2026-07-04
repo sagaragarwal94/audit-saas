@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 const IGNORE_DIRS = new Set([".git", "node_modules", ".next", "dist", "build", "coverage", ".turbo", ".vercel", "audit-output", "test-output"]);
-const TEXT_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".json", ".env", ".local", ".prisma", ".sql", ".md", ".yml", ".yaml"]);
+const TEXT_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".json", ".env", ".local", ".prisma", ".sql", ".md", ".yml", ".yaml", ".html", ".tf", ".bak", ".backup", ".old"]);
 
 export async function collectProject(root) {
   const files = await walk(root);

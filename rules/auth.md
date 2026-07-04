@@ -31,3 +31,11 @@
 **Risk:** Cookies without HttpOnly, Secure, and SameSite controls are easier to steal or abuse.
 **Recommendation:** Set HttpOnly, Secure, and SameSite=Lax or Strict for session cookies in production.
 **Standards:** OWASP ASVS V3 Session Management
+
+## PASSWORD_RESET_RATE_LIMIT_MISSING
+**Title:** Password reset endpoint may be missing rate limiting
+**Category:** auth
+**Severity:** high
+**Risk:** An unthrottled password-reset or forgot-password endpoint allows attackers to enumerate valid accounts or flood users with reset emails.
+**Recommendation:** Apply per-IP and per-account rate limits to password reset requests, same as login.
+**Standards:** OWASP ASVS V2 Authentication

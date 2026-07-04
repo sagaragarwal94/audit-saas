@@ -16,3 +16,11 @@
 **Risk:** Repeated webhook delivery can duplicate side effects, corrupt subscription state, or issue duplicate credits.
 **Recommendation:** Store processed event IDs and make subscription updates idempotent.
 **Standards:** OWASP API Security: Unrestricted Access to Sensitive Business Flows
+
+## STRIPE_CLIENT_TRUSTED_AMOUNT
+**Title:** Checkout may trust a price or amount value sent from the client
+**Category:** payments
+**Severity:** critical
+**Risk:** If a checkout or payment-intent handler reads the amount or price directly from the request body, a user can tamper with it client-side and pay any amount they choose.
+**Recommendation:** Always look up the price/amount server-side from a fixed price ID or your own product catalog — never trust a client-submitted amount.
+**Standards:** OWASP API Security: Unrestricted Access to Sensitive Business Flows

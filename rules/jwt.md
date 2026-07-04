@@ -16,3 +16,12 @@
 **Risk:** A hardcoded or short JWT secret can be brute-forced or leaked through source control, letting attackers forge valid tokens.
 **Recommendation:** Load the signing secret from environment variables, use at least 32 bytes of entropy, and rotate it if it was ever hardcoded.
 **Standards:** OWASP ASVS V3 Session Management
+
+## JWT_NO_EXPIRATION
+**Title:** JWT is signed without an expiration
+**Category:** jwt
+**Severity:** high
+**Risk:** Tokens signed without `expiresIn` remain valid forever, so a leaked token gives permanent access instead of a bounded window.
+**Recommendation:** Always set `expiresIn` when signing a JWT, and pair it with refresh-token rotation if long-lived sessions are needed.
+**Code Example:** jwt.sign(payload, secret, { expiresIn: "15m" });
+**Standards:** OWASP ASVS V3 Session Management

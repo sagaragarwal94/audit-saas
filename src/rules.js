@@ -4,7 +4,8 @@ import { loadRuleCatalog } from "./rule-catalog.js";
 const FOCUS_MAP = {
   security: [
     "auth", "authorization", "api", "database", "xss", "secrets", "headers", "logging",
-    "cors", "ssrf", "jwt", "csrf", "dependencies", "uploads", "admin", "infra", "injection"
+    "cors", "ssrf", "jwt", "csrf", "dependencies", "uploads", "admin", "infra", "injection",
+    "crypto", "oauth", "websocket"
   ],
   privacy: ["privacy", "secrets", "logging", "api"],
   payments: ["payments", "auth", "authorization", "api", "logging"],
@@ -730,6 +731,319 @@ const rules = [
         .filter((file) => /\beval\(|new Function\(|child_process\.exec\(|exec\(\s*`/i.test(file.content))
         .filter((file) => /req\.|request\.|params\.|body\b/i.test(file.content))
         .map((file) => findingForFile({}, file, /\beval\(|new Function\(|child_process\.exec\(/i, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "PASSWORD_RESET_RATE_LIMIT_MISSING",
+    title: "Password reset endpoint may be missing rate limiting",
+    category: "auth",
+    severity: "high",
+    risk: "An unthrottled password-reset or forgot-password endpoint allows attackers to enumerate valid accounts or flood users with reset emails.",
+    recommendation: "Apply per-IP and per-account rate limits to password reset requests, same as login.",
+    standards: ["OWASP ASVS V2 Authentication"],
+    detect(project) {
+      return appFilesWith(project, "auth")
+        .filter((file) => /forgot.?password|reset.?password|password.?reset/i.test(file.relativePath + file.content))
+        .filter((file) => !/rateLimit|limiter|upstash|slowDown|attempt/i.test(file.content))
+        .map((file) => findingForFile({}, file, /forgot.?password|reset.?password|password.?reset/i, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "JWT_NO_EXPIRATION",
+    title: "JWT is signed without an expiration",
+    category: "jwt",
+    severity: "high",
+    risk: "Tokens signed without expiresIn remain valid forever, so a leaked token gives permanent access instead of a bounded window.",
+    recommendation: "Always set expiresIn when signing a JWT, and pair it with refresh-token rotation if long-lived sessions are needed.",
+    codeExample: "jwt.sign(payload, secret, { expiresIn: \"15m\" });",
+    standards: ["OWASP ASVS V3 Session Management"],
+    detect(project) {
+      const pattern = /jwt\.sign\([^)]*\)/s;
+      return sourceFiles(project)
+        .filter((file) => /jwt\.sign\(/i.test(file.content))
+        .filter((file) => !/expiresIn/i.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "WEAK_RANDOM_TOKEN_GENERATION",
+    title: "Security token generated with a non-cryptographic random source",
+    category: "crypto",
+    severity: "high",
+    risk: "Math.random() is not cryptographically secure and its output can be predicted, letting attackers guess session tokens, password-reset tokens, or API keys generated from it.",
+    recommendation: "Generate tokens with crypto.randomUUID() or crypto.randomBytes() instead of Math.random().",
+    codeExample: "const token = crypto.randomBytes(32).toString(\"hex\");",
+    standards: ["OWASP Top 10: A02 Cryptographic Failures"],
+    detect(project) {
+      const pattern = /(token|secret|apiKey|sessionId|resetCode|otp)\s*[:=][^;]*Math\.random\(\)/i;
+      return sourceFiles(project)
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "OAUTH_STATE_PARAM_MISSING",
+    title: "OAuth authorization request may be missing a state parameter",
+    category: "oauth",
+    severity: "medium",
+    risk: "Without a state parameter, an OAuth authorization flow is vulnerable to CSRF, allowing an attacker to bind their own account to a victim's session.",
+    recommendation: "Generate a random state value per request, store it server-side or in a signed cookie, and verify it on callback before exchanging the authorization code.",
+    standards: ["OWASP Top 10: A01 Broken Access Control"],
+    detect(project) {
+      return sourceFiles(project)
+        .filter((file) => /\/authorize\?|oauth2?\/authorize|response_type=code/i.test(file.content))
+        .filter((file) => /client_id/i.test(file.content))
+        .filter((file) => !/[?&]state=|state:\s*[a-zA-Z]/i.test(file.content))
+        .map((file) => findingForFile({}, file, /\/authorize\?|oauth2?\/authorize/i, { confidence: "low" }));
+    }
+  },
+  {
+    id: "WEBSOCKET_NO_AUTH",
+    title: "WebSocket connection handler may be missing authentication",
+    category: "websocket",
+    severity: "high",
+    risk: "An unauthenticated WebSocket connection can let any client subscribe to real-time data or trigger actions meant for authenticated users only.",
+    recommendation: "Verify a session or token on connection (and on reconnection) before accepting subscriptions or forwarding messages.",
+    standards: ["OWASP Top 10: A01 Broken Access Control"],
+    detect(project) {
+      const pattern = /io\.on\(\s*['"]connection['"]|new WebSocket\.Server|wss\.on\(\s*['"]connection['"]/i;
+      return sourceFiles(project)
+        .filter((file) => pattern.test(file.content))
+        .filter((file) => !/auth|token|verify|jwt|session/i.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "MISSING_SRI_EXTERNAL_SCRIPT",
+    title: "External script loaded without Subresource Integrity",
+    category: "headers",
+    severity: "medium",
+    risk: "A script tag pointing at a third-party CDN without an integrity attribute will execute whatever that CDN serves, including a compromised or tampered file, with no verification.",
+    recommendation: "Add an integrity attribute (SRI hash) and crossorigin=\"anonymous\" to third-party script tags, or self-host the dependency.",
+    standards: ["OWASP Top 10: A08 Software and Data Integrity Failures"],
+    detect(project) {
+      const pattern = /<script[^>]+src=["']https?:\/\/[^"']+["'][^>]*>/gi;
+      return project.files
+        .filter((file) => file.ext === ".html")
+        .filter((file) => {
+          const matches = file.content.match(pattern) || [];
+          return matches.some((tag) => !/integrity=/i.test(tag));
+        })
+        .map((file) => findingForFile({}, file, /<script[^>]+src=["']https?:\/\//i, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "SWAGGER_UI_EXPOSED_PRODUCTION",
+    title: "API documentation UI may be exposed without an environment guard",
+    category: "admin",
+    severity: "medium",
+    risk: "Swagger/OpenAPI UIs left reachable in production hand attackers a full map of your API surface, including internal or undocumented-elsewhere endpoints.",
+    recommendation: "Mount API docs routes only when NODE_ENV !== \"production\", or put them behind authentication.",
+    standards: ["OWASP Top 10: A05 Security Misconfiguration"],
+    detect(project) {
+      return sourceFiles(project)
+        .filter((file) => /swagger-ui-express|swaggerUi\.serve/i.test(file.content))
+        .filter((file) => !/NODE_ENV\s*!==?\s*['"]production['"]|isProduction/i.test(file.content))
+        .map((file) => findingForFile({}, file, /swagger-ui-express|swaggerUi\.serve/i, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "INTERNAL_ENDPOINT_INFO_LEAK",
+    title: "Health/status endpoint may leak internal environment details",
+    category: "admin",
+    severity: "medium",
+    risk: "A /health or /status route that echoes back environment variables, config, or dependency versions gives attackers reconnaissance information for free.",
+    recommendation: "Return a minimal { status: \"ok\" } from health checks; keep detailed diagnostics behind authentication.",
+    standards: ["OWASP Top 10: A05 Security Misconfiguration"],
+    detect(project) {
+      return filesWith(project, "api_route")
+        .filter((file) => /\/(health|status)\b/i.test(file.relativePath))
+        .filter((file) => /process\.env|package\.json|versions?\b/i.test(file.content))
+        .map((file) => findingForFile({}, file, /\/(health|status)\b/i, { confidence: "low" }));
+    }
+  },
+  {
+    id: "POSTINSTALL_SCRIPT_RISK",
+    title: "package.json runs a script automatically on install",
+    category: "dependencies",
+    severity: "medium",
+    risk: "postinstall/preinstall scripts execute arbitrary code the moment npm install runs, and are a common vector for supply-chain attacks in compromised packages.",
+    recommendation: "Avoid install-time scripts where possible; if one is required, keep it minimal, reviewed, and version-controlled.",
+    standards: ["OWASP Top 10: A06 Vulnerable and Outdated Components"],
+    detect(project) {
+      const scripts = project.packageJson?.scripts || {};
+      const found = ["postinstall", "preinstall"].filter((name) => scripts[name]);
+      return found.length > 0 ? [{ evidence: found.map((name) => `${name}: ${scripts[name]}`).join("; "), confidence: "high" }] : [];
+    }
+  },
+  {
+    id: "HARDCODED_CLOUD_CREDENTIAL",
+    title: "Cloud provider credential pattern found in source",
+    category: "secrets",
+    severity: "critical",
+    risk: "An AWS access key (or similar cloud credential) committed to source code grants direct access to cloud infrastructure and is routinely scraped by automated bots within minutes of a public push.",
+    recommendation: "Remove the credential, rotate it immediately in the cloud provider console, and use environment variables or a secrets manager instead.",
+    standards: ["OWASP Top 10: A05 Security Misconfiguration"],
+    detect(project) {
+      const pattern = /\bAKIA[0-9A-Z]{16}\b/;
+      return project.files
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { evidence: "Cloud credential redacted", confidence: "high" }));
+    }
+  },
+  {
+    id: "EXPOSED_BACKUP_FILE",
+    title: "Backup or dump file present in the project",
+    category: "secrets",
+    severity: "high",
+    risk: "Backup or ad-hoc dump files often contain full database contents or old credentials, and are easy to overlook when reviewing what's committed.",
+    recommendation: "Remove backup/dump files from version control and store backups outside the repository with proper access controls.",
+    standards: ["OWASP Top 10: A05 Security Misconfiguration"],
+    detect(project) {
+      return project.files
+        .filter((file) => /\.(bak|backup|old)$/i.test(file.relativePath) || /dump\.sql$|backup.*\.sql$/i.test(file.relativePath))
+        .filter((file) => !/migrations?\//i.test(file.relativePath))
+        .map((file) => findingForFile({}, file, /\.(bak|backup|old|sql)$/i, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "TERRAFORM_PUBLIC_S3_BUCKET",
+    title: "Terraform config may create a publicly readable storage bucket",
+    category: "infra",
+    severity: "critical",
+    risk: "An S3 bucket with a public-read ACL or disabled public-access-block settings can expose every object in it to the internet, including user uploads or backups.",
+    recommendation: "Keep buckets private by default and use signed URLs or a CDN with access controls for anything that needs to be public.",
+    standards: ["OWASP Top 10: A05 Security Misconfiguration"],
+    detect(project) {
+      const pattern = /acl\s*=\s*["'](public-read|public-read-write)["']|block_public_acls\s*=\s*false/i;
+      return project.files
+        .filter((file) => file.ext === ".tf")
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "high" }));
+    }
+  },
+  {
+    id: "TERRAFORM_OPEN_SECURITY_GROUP",
+    title: "Terraform config may open a sensitive port to the entire internet",
+    category: "infra",
+    severity: "high",
+    risk: "A security group ingress rule with 0.0.0.0/0 on an administrative port (SSH 22, RDP 3389) or a database port exposes that service to internet-wide scanning and brute force.",
+    recommendation: "Restrict ingress CIDR blocks to known IP ranges or a VPN/bastion, never 0.0.0.0/0 for administrative or database ports.",
+    standards: ["OWASP Top 10: A05 Security Misconfiguration"],
+    detect(project) {
+      return project.files
+        .filter((file) => file.ext === ".tf")
+        .filter((file) => /0\.0\.0\.0\/0/.test(file.content))
+        .filter((file) => /\b(22|3389|5432|3306|27017|6379)\b/.test(file.content))
+        .map((file) => findingForFile({}, file, /0\.0\.0\.0\/0/, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "CSP_UNSAFE_INLINE",
+    title: "Content-Security-Policy allows unsafe-inline or unsafe-eval",
+    category: "headers",
+    severity: "medium",
+    risk: "unsafe-inline/unsafe-eval in a CSP largely defeats its purpose as an XSS mitigation, since it allows the exact inline script execution CSP is meant to block.",
+    recommendation: "Use nonces or hashes for required inline scripts instead of unsafe-inline, and avoid unsafe-eval entirely.",
+    standards: ["OWASP Top 10: A05 Security Misconfiguration"],
+    detect(project) {
+      const pattern = /Content-Security-Policy[^;'"]*['"]?[^;]*unsafe-(inline|eval)/i;
+      return project.files
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "high" }));
+    }
+  },
+  {
+    id: "SOURCE_MAP_ENABLED_PRODUCTION",
+    title: "Production build may ship source maps",
+    category: "headers",
+    severity: "medium",
+    risk: "Public source maps let anyone reconstruct your original source code, including comments, variable names, and any logic you intended to keep private.",
+    recommendation: "Disable source maps for production builds, or upload them privately to your error-tracking provider instead of serving them publicly.",
+    standards: ["OWASP Top 10: A05 Security Misconfiguration"],
+    detect(project) {
+      const pattern = /productionBrowserSourceMaps\s*:\s*true|devtool\s*:\s*['"]source-map['"]/;
+      return project.files
+        .filter((file) => /next\.config|webpack\.config/i.test(file.relativePath))
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "high" }));
+    }
+  },
+  {
+    id: "STRIPE_CLIENT_TRUSTED_AMOUNT",
+    title: "Checkout may trust a price or amount value sent from the client",
+    category: "payments",
+    severity: "critical",
+    risk: "If a checkout or payment-intent handler reads the amount or price directly from the request body, a user can tamper with it client-side and pay any amount they choose.",
+    recommendation: "Always look up the price/amount server-side from a fixed price ID or your own product catalog — never trust a client-submitted amount.",
+    standards: ["OWASP API Security: Unrestricted Access to Sensitive Business Flows"],
+    detect(project) {
+      const pattern = /(amount|unit_amount|price)\s*:\s*(req(uest)?\.body|body)\.(amount|price|total)/i;
+      return filesWith(project, "payment")
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "RESPONSE_MISSING_PAGINATION_LIMIT",
+    title: "Query may return an unbounded number of records",
+    category: "database",
+    severity: "medium",
+    risk: "A findMany/list query with no take/limit can return an entire table to a single request, enabling resource-exhaustion and over-fetching more data than the caller should see.",
+    recommendation: "Always cap list queries with a take/limit and offer pagination for anything that can grow unbounded.",
+    standards: ["OWASP API Security: Unrestricted Resource Consumption"],
+    detect(project) {
+      const pattern = /\.findMany\(\s*\)|\.findMany\(\s*\{\s*\}\s*\)|\.findMany\(\{\s*where\s*:[^}]*\}\s*\)/s;
+      return filesWith(project, "api_route")
+        .filter((file) => /\.findMany\(/i.test(file.content))
+        .filter((file) => !/take\s*:|limit\s*:|skip\s*:/i.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "low" }));
+    }
+  },
+  {
+    id: "GRAPHQL_NO_DEPTH_LIMIT",
+    title: "GraphQL server may be missing query depth/cost limiting",
+    category: "api",
+    severity: "medium",
+    risk: "Without a depth or cost limit, a single deeply nested or highly repetitive GraphQL query can exhaust server resources — a denial-of-service vector unique to GraphQL's flexible query shape.",
+    recommendation: "Add a depth-limiting or cost-analysis library (e.g. graphql-depth-limit, graphql-cost-analysis) to the server's validation rules.",
+    standards: ["OWASP API Security: Unrestricted Resource Consumption"],
+    detect(project) {
+      return sourceFiles(project)
+        .filter((file) => /ApolloServer|graphqlHTTP|createYoga/i.test(file.content))
+        .filter((file) => !/depthLimit|graphql-depth-limit|costAnalysis|graphql-cost-analysis/i.test(file.content))
+        .map((file) => findingForFile({}, file, /ApolloServer|graphqlHTTP|createYoga/i, { confidence: "low" }));
+    }
+  },
+  {
+    id: "NEXTJS_SERVER_ACTION_NO_AUTH",
+    title: "Next.js Server Action may be missing an authentication check",
+    category: "api",
+    severity: "critical",
+    risk: "A \"use server\" action is a public network endpoint even though it's called like a function — without an explicit auth check, anyone who discovers its action ID can invoke it directly, bypassing any UI-level gating.",
+    recommendation: "Verify the session/user at the top of every Server Action that reads or writes sensitive data, exactly as you would in an API route.",
+    standards: ["OWASP Top 10: A01 Broken Access Control"],
+    detect(project) {
+      return sourceFiles(project)
+        .filter((file) => /^\s*["']use server["'];?\s*$/m.test(file.content))
+        .filter((file) => /\bexport\s+(async\s+)?function\b/.test(file.content))
+        .filter((file) => !/auth\(|getServerSession|currentUser|getAuth|requireAuth|session\.user/i.test(file.content))
+        .map((file) => findingForFile({}, file, /["']use server["']/, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "VERBOSE_ERROR_STACK_TRACE_TO_CLIENT",
+    title: "API response may return a raw error message or stack trace",
+    category: "logging",
+    severity: "medium",
+    risk: "Returning err.stack or a raw error message to the client can leak file paths, library versions, query fragments, or other internals useful for an attacker's reconnaissance.",
+    recommendation: "Log the full error server-side, and return a generic error message to the client.",
+    standards: ["OWASP Top 10: A09 Security Logging and Monitoring Failures"],
+    detect(project) {
+      const pattern = /(json|send)\(\s*\{[^}]*(error|message)\s*:\s*(err(or)?)\.(stack|message)/is;
+      return filesWith(project, "api_route")
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
     }
   }
 ];

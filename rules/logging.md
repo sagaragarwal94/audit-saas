@@ -15,3 +15,11 @@
 **Risk:** Without security and cost anomaly alerts, abuse can continue unnoticed after launch.
 **Recommendation:** Add alerts for failed login spikes, repeated 401/403s, sequential ID access, AI spend spikes, webhook failures, admin access, and error-rate increases.
 **Standards:** OWASP Top 10: A09 Security Logging and Monitoring Failures
+
+## VERBOSE_ERROR_STACK_TRACE_TO_CLIENT
+**Title:** API response may return a raw error message or stack trace
+**Category:** logging
+**Severity:** medium
+**Risk:** Returning `err.stack` or a raw error message to the client can leak file paths, library versions, query fragments, or other internals useful for an attacker's reconnaissance.
+**Recommendation:** Log the full error server-side, and return a generic error message to the client.
+**Standards:** OWASP Top 10: A09 Security Logging and Monitoring Failures

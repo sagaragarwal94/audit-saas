@@ -31,3 +31,19 @@
 **Risk:** Secrets committed inside a GitHub Actions or other CI workflow file are visible to anyone with repository read access and remain in git history even after removal.
 **Recommendation:** Reference secrets only through the CI provider's encrypted secret store (e.g. `${{ secrets.NAME }}`) and rotate any value that was ever hardcoded.
 **Standards:** OWASP Top 10: A05 Security Misconfiguration
+
+## HARDCODED_CLOUD_CREDENTIAL
+**Title:** Cloud provider credential pattern found in source
+**Category:** secrets
+**Severity:** critical
+**Risk:** An AWS access key (or similar cloud credential) committed to source code grants direct access to cloud infrastructure and is routinely scraped by automated bots within minutes of a public push.
+**Recommendation:** Remove the credential, rotate it immediately in the cloud provider console, and use environment variables or a secrets manager instead.
+**Standards:** OWASP Top 10: A05 Security Misconfiguration
+
+## EXPOSED_BACKUP_FILE
+**Title:** Backup or dump file present in the project
+**Category:** secrets
+**Severity:** high
+**Risk:** `.bak`, `.old`, `.backup`, or ad-hoc `.sql` dump files often contain full database contents or old credentials, and are easy to overlook when reviewing what's committed.
+**Recommendation:** Remove backup/dump files from version control and store backups outside the repository with proper access controls.
+**Standards:** OWASP Top 10: A05 Security Misconfiguration
