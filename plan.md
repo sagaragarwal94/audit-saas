@@ -2,14 +2,14 @@
 
 ## Context
 
-- Product: a local CLI that audits SaaS codebases for security, privacy, AI-abuse, payments, and production-readiness gaps — **66 rules across 23 categories** as of this revision (up from 46/20; see "Rule coverage" below).
+- Product: a local CLI that audits SaaS codebases for security, privacy, AI-abuse, payments, and production-readiness gaps — **65 rules across 23 categories** as of this revision (up from 46/20; see "Rule coverage" below).
 - Runs 100% on the user's machine. No hosted backend, no database, no per-scan infra cost. The only external cost is the *user's own* AI-review API key/local LLM, which they pay for directly — not us.
 - Current state: private beta, invite-only, distributed as an npm tarball (`npm run beta:pack`) or repo access. No pricing or license enforcement exists yet.
 - Audience: solo founders and small teams shipping fast, often with AI coding assistants (Cursor, Claude Code, v0, Lovable, Bolt, etc.) — the "vibe-coding" crowd from the HN/PH/Twitter/Reddit launch copy.
 
-## Rule coverage: is 66 rules enough?
+## Rule coverage: is 65 rules enough?
 
-46 was a reasonable v1, but "enough" isn't really the right frame for a security scanner — coverage compounds, and gaps in coverage are invisible until someone gets bitten by exactly the thing you didn't check for. This revision adds 20 more rules (auth/JWT hardening, cryptographic randomness, OAuth CSRF, WebSocket auth, cloud/Terraform misconfiguration, supply-chain install scripts, hardcoded cloud credentials, exposed backups, CSP/SRI/source-map hygiene, Stripe amount tampering, unbounded queries, GraphQL depth limits, and — given how common the pattern is right now — unauthenticated Next.js Server Actions), bringing the total to 66 across 23 categories.
+46 was a reasonable v1, but "enough" isn't really the right frame for a security scanner — coverage compounds, and gaps in coverage are invisible until someone gets bitten by exactly the thing you didn't check for. This revision adds 20 more rules (auth/JWT hardening, cryptographic randomness, OAuth CSRF, WebSocket auth, cloud/Terraform misconfiguration, supply-chain install scripts, hardcoded cloud credentials, exposed backups, CSP/SRI/source-map hygiene, Stripe amount tampering, unbounded queries, GraphQL depth limits, and — given how common the pattern is right now — unauthenticated Next.js Server Actions), bringing the total to 65 across 23 categories.
 
 Where to keep expanding, roughly in priority order:
 1. **Framework-specific depth**: Next.js middleware bypass patterns, Remix loader/action auth, tRPC procedure-level auth — the audience skews heavily Next.js, so going deeper there beats going wider into frameworks few beta testers use.
@@ -32,7 +32,7 @@ The tier bands below were validated directly with the private-beta waitlist surv
 - No AI review
 
 ### Pro — $15/mo, or $12/mo billed yearly (save $36/yr) *(the $9–19/mo band)*
-- All 66 rules, all 23 categories
+- All 65 rules, all 23 categories
 - Unlimited scans, unlimited projects, unlimited team members
 - SARIF export for CI
 - AI review enabled (bring your own key, or local LLM)

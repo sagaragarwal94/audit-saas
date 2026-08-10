@@ -97,7 +97,7 @@ Good rule contributions include:
 
 ## Current Coverage
 
-66 rules across 23 categories:
+65 rules across 23 categories:
 
 - Framework/provider detection for common SaaS stacks.
 - Auth security checks: password hashing, login/password-reset rate limits, session expiry, cookie flags.

@@ -367,46 +367,6 @@ html[data-theme="light"] .theme-toggle .icon-dark { display: inline; }
 .contribute h2 { margin: 0 0 10px; }
 .contribute p { color: var(--muted); max-width: 520px; margin: 0 auto 22px; }
 
-/* Locked rule teaser (Medium-style fade: real content fades to
-   transparent via mask, not blur, then a CTA sits in the faded zone) */
-.locked-rules {
-  position: relative;
-  margin-top: 12px;
-}
-.locked-fade {
-  pointer-events: none;
-  user-select: none;
-  max-height: 460px;
-  overflow: hidden;
-  mask-image: linear-gradient(to bottom, black 0%, black 25%, transparent 92%);
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 25%, transparent 92%);
-}
-.locked-overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 240px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  text-align: center;
-  padding: 0 32px 8px;
-  background: linear-gradient(to bottom, transparent 0%, var(--bg) 55%);
-}
-.locked-count {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin: 0 0 8px;
-}
-.locked-copy {
-  color: var(--muted);
-  max-width: 480px;
-  margin: 0 0 20px;
-  font-size: 0.92rem;
-}
-
 /* Doc pages: FAQ, Privacy, Terms, Security */
 .doc-hero { padding: 72px 0 32px; }
 .doc-hero h1 {

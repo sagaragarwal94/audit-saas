@@ -8,12 +8,12 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="AuditSaas" />
 <meta property="og:title" content="The AuditSaas rule catalog" />
-<meta property="og:description" content="66 rules across 23 categories: auth, secrets, payments, AI abuse, CORS/SSRF/CSRF, and more. Private beta — request access to try it." />
+<meta property="og:description" content="65 rules across 23 categories: auth, secrets, payments, AI abuse, CORS/SSRF/CSRF, and more. Private beta — request access to try it." />
 <meta property="og:url" content="https://auditsaas.org/rules" />
 <meta property="og:image" content="https://auditsaas.org/og-image.png" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="The AuditSaas rule catalog" />
-<meta name="twitter:description" content="66 rules across 23 categories: auth, secrets, payments, AI abuse, CORS/SSRF/CSRF, and more." />
+<meta name="twitter:description" content="65 rules across 23 categories: auth, secrets, payments, AI abuse, CORS/SSRF/CSRF, and more." />
 <meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
 <link rel="stylesheet" href="styles.css" />
@@ -47,38 +47,174 @@
 <main>
   <section class="rules-hero">
     <div class="wrap">
-      <p class="eyebrow">66 rules · 23 categories</p>
+      <p class="eyebrow">65 rules · 23 categories</p>
       <h1>The rule catalog</h1>
-      <p class="sub">Every rule ships with a risk statement, recommendation, and standards mapping. Here's one example per severity — the full catalog is available to invited beta testers.</p>
+      <p class="sub">Every rule ships with a risk statement, recommendation, and standards mapping. Browse all 65 below, or add your own — see <a href="https://github.com/sagaragarwal94/audit-saas/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.</p>
     </div>
   </section>
 
   <section class="rules-list">
     <div class="wrap">
 
+      <!-- RULES:START -->
       <div class="category">
-        <h2>A sample of what's inside</h2>
-        <div class="rule"><div class="rule-head"><h3>SECRETS_ENV_COMMITTED</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Committed environment files can leak production credentials and third-party API keys.</p><p><strong>Fix:</strong> Remove real <code>.env</code> files from version control, rotate exposed secrets, keep only <code>.env.example</code>.</p></div>
-        <div class="rule"><div class="rule-head"><h3>AUTH_LOGIN_RATE_LIMIT_MISSING</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Unthrottled login attempts allow credential stuffing and brute-force attacks.</p><p><strong>Fix:</strong> Apply rate limits per IP and per account, track failed attempts, and add lockout/backoff controls.</p></div>
-        <div class="rule"><div class="rule-head"><h3>AUTH_SESSION_EXPIRY_MISSING</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Long-lived or unbounded sessions increase impact after token theft.</p><p><strong>Fix:</strong> Configure bounded session expiry, refresh-token rotation, and server-side logout invalidation.</p></div>
+        <h2>Admin And Debug Surface</h2>
+        <div class="rule"><div class="rule-head"><h3>ADMIN_ROUTE_NO_ROLE_CHECK</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> An admin-labeled route that only checks for a valid session (not an admin role) can be reached by any authenticated user.</p><p><strong>Fix:</strong> Require an explicit role, permission, or claim check (e.g. <code>role === "admin"</code>) in every admin route, in addition to authentication.</p></div>
+        <div class="rule"><div class="rule-head"><h3>DEBUG_ENDPOINT_EXPOSED</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Debug/internal endpoints often skip auth and can expose environment details, internal state, or admin actions if left reachable after launch.</p><p><strong>Fix:</strong> Remove debug/test routes before shipping, or gate them behind authentication and a non-production environment check.</p></div>
+        <div class="rule"><div class="rule-head"><h3>SWAGGER_UI_EXPOSED_PRODUCTION</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Swagger/OpenAPI UIs left reachable in production hand attackers a full map of your API surface, including internal or undocumented-elsewhere endpoints.</p><p><strong>Fix:</strong> Mount API docs routes only when <code>NODE_ENV !== "production"</code>, or put them behind authentication.</p></div>
+        <div class="rule"><div class="rule-head"><h3>INTERNAL_ENDPOINT_INFO_LEAK</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> A <code>/health</code> or <code>/status</code> route that echoes back environment variables, config, or dependency versions gives attackers reconnaissance information for free.</p><p><strong>Fix:</strong> Return a minimal <code>{ status: "ok" }</code> from health checks; keep detailed diagnostics behind authentication.</p></div>
       </div>
 
-      <div class="locked-rules">
-        <div class="locked-fade" aria-hidden="true">
-          <div class="rule"><div class="rule-head"><h3>SQL_INJECTION_RAW_QUERY</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> String-built SQL can allow attackers to read, modify, or delete database data.</p><p><strong>Fix:</strong> Use parameterized queries or ORM query builders.</p></div>
-          <div class="rule"><div class="rule-head"><h3>PAYMENT_STRIPE_WEBHOOK_SIGNATURE_MISSING</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Attackers may forge payment events and unlock paid features or alter subscription state.</p><p><strong>Fix:</strong> Verify signatures with the raw request body before processing events.</p></div>
-          <div class="rule"><div class="rule-head"><h3>JWT_ALGORITHM_NOT_ENFORCED</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Verifying tokens without pinning the algorithm allows algorithm-confusion attacks.</p><p><strong>Fix:</strong> Always pass an explicit algorithms allowlist to <code>jwt.verify</code>.</p></div>
-          <div class="rule"><div class="rule-head"><h3>AI_FRONTEND_OR_UNBOUNDED</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Unprotected AI calls can leak API keys, enable abuse, and burn API spend quickly.</p><p><strong>Fix:</strong> Keep AI keys server-side and enforce per-user rate limits.</p></div>
-          <div class="rule"><div class="rule-head"><h3>SSRF_UNVALIDATED_URL_FETCH</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Fetching a URL built from request input lets an attacker reach internal services or metadata endpoints.</p><p><strong>Fix:</strong> Validate outbound URLs against an allowlist of hosts.</p></div>
-          <div class="rule"><div class="rule-head"><h3>MASS_ASSIGNMENT_RISK</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Spreading the raw request body into a database write lets attackers set fields like <code>role</code>.</p><p><strong>Fix:</strong> Explicitly allowlist the fields copied into writes.</p></div>
-          <div class="rule"><div class="rule-head"><h3>CORS_WILDCARD_WITH_CREDENTIALS</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> A wildcard origin combined with credentials lets any site read authenticated responses.</p><p><strong>Fix:</strong> Use an explicit allowlist of trusted origins.</p></div>
-          <div class="rule"><div class="rule-head"><h3>INFRA_DB_PORT_EXPOSED</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Publishing database ports beyond the internal network can expose data stores to the internet.</p><p><strong>Fix:</strong> Remove public port mappings for data stores.</p></div>
-        </div>
-        <div class="locked-overlay">
-          <p class="locked-count">+63 more rules</p>
-          <p class="locked-copy">CORS, SSRF, JWT, CSRF, OAuth, WebSockets, cryptography, cloud/Terraform misconfig, dependency, file-upload, admin/debug, infra, and code-execution checks — unlocked for invited beta testers.</p>
-          <a class="btn btn-primary" href="/#waitlist">Request beta access →</a>
-        </div>
+      <div class="category">
+        <h2>AI</h2>
+        <div class="rule"><div class="rule-head"><h3>AI_FRONTEND_OR_UNBOUNDED</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Unprotected AI calls can leak API keys, enable abuse, and burn API spend quickly.</p><p><strong>Fix:</strong> Keep AI keys server-side, require authentication, enforce per-user/IP/tenant rate limits, cap tokens/input/file size, and track cost per billing account.</p></div>
+        <div class="rule"><div class="rule-head"><h3>AI_PROMPT_INJECTION_REVIEW</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> LLM features can leak sensitive context or execute unsafe tool actions if prompts, retrieval, or tools are not constrained.</p><p><strong>Fix:</strong> Add prompt-injection mitigations, tool authorization checks, data minimization, and disclosure in the privacy policy when prompts are sent to AI providers.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>API And Authorization</h2>
+        <div class="rule"><div class="rule-head"><h3>AUTHZ_IDOR_POSSIBLE</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Users may access another user's or tenant's records by changing an ID in the URL or request body.</p><p><strong>Fix:</strong> Scope every sensitive query by authenticated user, organization, or tenant in the database query itself.</p></div>
+        <div class="rule"><div class="rule-head"><h3>API_AUTH_MISSING</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Public API routes can expose data or trigger sensitive actions without a valid user session.</p><p><strong>Fix:</strong> Require server-side authentication and authorization in every sensitive API route.</p></div>
+        <div class="rule"><div class="rule-head"><h3>API_VALIDATION_MISSING</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Unvalidated input can lead to malformed data, injection risks, and unexpected application behavior.</p><p><strong>Fix:</strong> Validate request bodies with Zod, Valibot, Joi, Yup, or equivalent schema validation before use.</p></div>
+        <div class="rule"><div class="rule-head"><h3>OPEN_REDIRECT_UNVALIDATED</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Redirecting to a URL taken directly from a query parameter can be used for phishing or to bypass OAuth redirect_uri allowlists.</p><p><strong>Fix:</strong> Validate redirect targets against an allowlist of internal paths or trusted domains before redirecting.</p></div>
+        <div class="rule"><div class="rule-head"><h3>MASS_ASSIGNMENT_RISK</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Spreading the raw request body into a create/update call lets attackers set fields they should not control, such as <code>role</code>, <code>isAdmin</code>, or <code>plan</code>.</p><p><strong>Fix:</strong> Explicitly allowlist the fields copied from request input into database writes instead of spreading the full body.</p></div>
+        <div class="rule"><div class="rule-head"><h3>API_RATE_LIMIT_MISSING_PUBLIC</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Endpoints without any rate limiting are vulnerable to scraping, credential stuffing, and cost-driving abuse at scale.</p><p><strong>Fix:</strong> Add per-IP and per-account rate limiting (e.g. Upstash, express-rate-limit, a WAF rule) to public-facing API routes.</p></div>
+        <div class="rule"><div class="rule-head"><h3>GRAPHQL_INTROSPECTION_ENABLED</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Introspection lets attackers enumerate your entire schema, including fields and mutations not exposed in your app's UI.</p><p><strong>Fix:</strong> Disable introspection (and the GraphiQL/Playground UI) outside of development environments.</p></div>
+        <div class="rule"><div class="rule-head"><h3>GRAPHQL_NO_DEPTH_LIMIT</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Without a depth or cost limit, a single deeply nested or highly repetitive GraphQL query can exhaust server resources — a denial-of-service vector unique to GraphQL's flexible query shape.</p><p><strong>Fix:</strong> Add a depth-limiting or cost-analysis library (e.g. <code>graphql-depth-limit</code>, <code>graphql-cost-analysis</code>) to the server's validation rules.</p></div>
+        <div class="rule"><div class="rule-head"><h3>NEXTJS_SERVER_ACTION_NO_AUTH</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> A <code>"use server"</code> action is a public network endpoint even though it's called like a function — without an explicit auth check, anyone who discovers its action ID can invoke it directly, bypassing any UI-level gating.</p><p><strong>Fix:</strong> Verify the session/user at the top of every Server Action that reads or writes sensitive data, exactly as you would in an API route.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Auth</h2>
+        <div class="rule"><div class="rule-head"><h3>AUTH_PASSWORD_HASHING_WEAK</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Weak password storage can lead to account takeover if the database is exposed.</p><p><strong>Fix:</strong> Use Argon2id or bcrypt with a suitable cost factor, never plaintext or raw SHA/MD5 hashes.</p></div>
+        <div class="rule"><div class="rule-head"><h3>AUTH_LOGIN_RATE_LIMIT_MISSING</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Unthrottled login attempts allow credential stuffing and brute-force attacks.</p><p><strong>Fix:</strong> Apply rate limits per IP and per account, track failed attempts, and add lockout/backoff controls.</p></div>
+        <div class="rule"><div class="rule-head"><h3>AUTH_SESSION_EXPIRY_MISSING</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Long-lived or unbounded sessions increase impact after token theft.</p><p><strong>Fix:</strong> Configure bounded session expiry, refresh-token rotation where relevant, and server-side logout invalidation.</p></div>
+        <div class="rule"><div class="rule-head"><h3>AUTH_COOKIE_FLAGS_MISSING</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Cookies without HttpOnly, Secure, and SameSite controls are easier to steal or abuse.</p><p><strong>Fix:</strong> Set HttpOnly, Secure, and SameSite=Lax or Strict for session cookies in production.</p></div>
+        <div class="rule"><div class="rule-head"><h3>PASSWORD_RESET_RATE_LIMIT_MISSING</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> An unthrottled password-reset or forgot-password endpoint allows attackers to enumerate valid accounts or flood users with reset emails.</p><p><strong>Fix:</strong> Apply per-IP and per-account rate limits to password reset requests, same as login.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>CORS</h2>
+        <div class="rule"><div class="rule-head"><h3>CORS_WILDCARD_WITH_CREDENTIALS</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> A wildcard <code>Access-Control-Allow-Origin</code> combined with <code>Access-Control-Allow-Credentials: true</code> lets any site read authenticated responses on behalf of a logged-in user.</p><p><strong>Fix:</strong> Use an explicit allowlist of trusted origins instead of <code>*</code> whenever credentials are allowed.</p></div>
+        <div class="rule"><div class="rule-head"><h3>CORS_ORIGIN_REFLECTED</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Reflecting the request <code>Origin</code> header back verbatim effectively disables CORS protection for every origin.</p><p><strong>Fix:</strong> Validate the incoming origin against an explicit allowlist before echoing it back in <code>Access-Control-Allow-Origin</code>.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Cryptography</h2>
+        <div class="rule"><div class="rule-head"><h3>WEAK_RANDOM_TOKEN_GENERATION</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> <code>Math.random()</code> is not cryptographically secure and its output can be predicted, letting attackers guess session tokens, password-reset tokens, or API keys generated from it.</p><p><strong>Fix:</strong> Generate tokens with <code>crypto.randomUUID()</code> or <code>crypto.randomBytes()</code> instead of <code>Math.random()</code>.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>CSRF</h2>
+        <div class="rule"><div class="rule-head"><h3>CSRF_PROTECTION_MISSING</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> State-changing requests authenticated only by cookies can be triggered from another origin without a CSRF token or same-site defense.</p><p><strong>Fix:</strong> Use SameSite=Lax/Strict cookies together with a CSRF token (double-submit cookie or synchronizer token) for state-changing routes, or rely on a framework's built-in CSRF middleware.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Database</h2>
+        <div class="rule"><div class="rule-head"><h3>SQL_INJECTION_RAW_QUERY</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> String-built SQL can allow attackers to read, modify, or delete database data.</p><p><strong>Fix:</strong> Use parameterized queries or ORM query builders. Never concatenate user-controlled data into SQL.</p></div>
+        <div class="rule"><div class="rule-head"><h3>SUPABASE_RLS_NOT_CONFIRMED</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Without RLS policies, any authenticated (or anonymous, with the anon key) client can read or write every row in a Supabase table directly from the browser.</p><p><strong>Fix:</strong> Enable Row Level Security on every table and add explicit policies scoping access to the authenticated user or tenant.</p></div>
+        <div class="rule"><div class="rule-head"><h3>RESPONSE_MISSING_PAGINATION_LIMIT</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> A <code>findMany</code>/list query with no <code>take</code>/<code>limit</code> can return an entire table to a single request, enabling resource-exhaustion and over-fetching more data than the caller should see.</p><p><strong>Fix:</strong> Always cap list queries with a <code>take</code>/<code>limit</code> and offer pagination for anything that can grow unbounded.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Dependency</h2>
+        <div class="rule"><div class="rule-head"><h3>DEPENDENCY_NO_LOCKFILE</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Without a lockfile, dependency versions can drift between installs, pulling in unreviewed or vulnerable transitive updates.</p><p><strong>Fix:</strong> Commit <code>package-lock.json</code>, <code>pnpm-lock.yaml</code>, or <code>yarn.lock</code> and install with <code>--frozen-lockfile</code> in CI.</p></div>
+        <div class="rule"><div class="rule-head"><h3>DEPENDENCY_WILDCARD_VERSION</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> <code>*</code> or <code>latest</code> version ranges can silently pull in breaking or malicious updates, including supply-chain attacks published under a trusted package name.</p><p><strong>Fix:</strong> Pin dependencies to specific or caret-ranged versions and review updates deliberately.</p></div>
+        <div class="rule"><div class="rule-head"><h3>DEPENDENCY_KNOWN_RISKY_PACKAGE</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Some packages are deprecated, unmaintained, or have a documented history of supply-chain compromise; continuing to depend on them carries elevated risk.</p><p><strong>Fix:</strong> Replace deprecated/unmaintained packages with actively maintained alternatives and run <code>npm audit</code> regularly.</p></div>
+        <div class="rule"><div class="rule-head"><h3>POSTINSTALL_SCRIPT_RISK</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> <code>postinstall</code>/<code>preinstall</code> scripts execute arbitrary code the moment <code>npm install</code> runs, and are a common vector for supply-chain attacks in compromised packages. Having one in your own project also means every contributor and CI runner executes it blindly.</p><p><strong>Fix:</strong> Avoid install-time scripts where possible; if one is required, keep it minimal, reviewed, and version-controlled.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Headers And Transport</h2>
+        <div class="rule"><div class="rule-head"><h3>HEADERS_HTTPS_RUNTIME</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Missing browser security headers increase exposure to XSS, clickjacking, MIME sniffing, and data leakage.</p><p><strong>Fix:</strong> Enforce HTTPS and configure HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy.</p></div>
+        <div class="rule"><div class="rule-head"><h3>CONFIG_HTTP_URLS</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Plain HTTP URLs can leak traffic and break secure cookie/OAuth/webhook expectations.</p><p><strong>Fix:</strong> Use HTTPS for production URLs, OAuth callbacks, payment webhooks, and API integrations.</p></div>
+        <div class="rule"><div class="rule-head"><h3>CSP_UNSAFE_INLINE</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> <code>unsafe-inline</code>/<code>unsafe-eval</code> in a CSP largely defeats its purpose as an XSS mitigation, since it allows the exact inline script execution CSP is meant to block.</p><p><strong>Fix:</strong> Use nonces or hashes for required inline scripts instead of <code>unsafe-inline</code>, and avoid <code>unsafe-eval</code> entirely.</p></div>
+        <div class="rule"><div class="rule-head"><h3>SOURCE_MAP_ENABLED_PRODUCTION</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Public source maps let anyone reconstruct your original source code, including comments, variable names, and any logic you intended to keep private.</p><p><strong>Fix:</strong> Disable source maps for production builds, or upload them privately to your error-tracking provider instead of serving them publicly.</p></div>
+        <div class="rule"><div class="rule-head"><h3>MISSING_SRI_EXTERNAL_SCRIPT</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> A <code>&lt;script&gt;</code> tag pointing at a third-party CDN without an <code>integrity</code> attribute will execute whatever that CDN serves, including a compromised or tampered file, with no verification.</p><p><strong>Fix:</strong> Add an <code>integrity</code> attribute (SRI hash) and <code>crossorigin="anonymous"</code> to third-party script tags, or self-host the dependency.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Infrastructure</h2>
+        <div class="rule"><div class="rule-head"><h3>INFRA_DOCKER_ROOT_USER</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Containers running as root increase the blast radius of a container escape or dependency compromise.</p><p><strong>Fix:</strong> Add a non-root <code>USER</code> directive to the Dockerfile and drop unnecessary capabilities.</p></div>
+        <div class="rule"><div class="rule-head"><h3>INFRA_DB_PORT_EXPOSED</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Publishing database/cache ports (Postgres 5432, MySQL 3306, MongoDB 27017, Redis 6379) beyond the internal Docker network can expose data stores directly to the internet on misconfigured hosts.</p><p><strong>Fix:</strong> Remove public port mappings for data stores in production compose files and restrict access to the internal network or a VPN/bastion.</p></div>
+        <div class="rule"><div class="rule-head"><h3>TERRAFORM_PUBLIC_S3_BUCKET</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> An S3 bucket with a public-read ACL or disabled public-access-block settings can expose every object in it to the internet, including user uploads or backups.</p><p><strong>Fix:</strong> Keep buckets private by default and use signed URLs or a CDN with access controls for anything that needs to be public.</p></div>
+        <div class="rule"><div class="rule-head"><h3>TERRAFORM_OPEN_SECURITY_GROUP</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> A security group ingress rule with <code>0.0.0.0/0</code> on an administrative port (SSH 22, RDP 3389) or a database port exposes that service to internet-wide scanning and brute force.</p><p><strong>Fix:</strong> Restrict ingress CIDR blocks to known IP ranges or a VPN/bastion, never <code>0.0.0.0/0</code> for administrative or database ports.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Code Execution And Deserialization</h2>
+        <div class="rule"><div class="rule-head"><h3>CODE_EXECUTION_EVAL_USER_INPUT</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> <code>eval</code>, <code>new Function</code>, or <code>child_process.exec</code> used near request input can allow full remote code execution if any user-controlled value reaches it.</p><p><strong>Fix:</strong> Remove dynamic code execution entirely, or if unavoidable, use a strict sandbox and never pass unsanitized user input into it.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>JWT</h2>
+        <div class="rule"><div class="rule-head"><h3>JWT_ALGORITHM_NOT_ENFORCED</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Verifying tokens without pinning the expected algorithm allows algorithm-confusion attacks (for example forging an HS256 token signed with a known public RS256 key, or an <code>alg: none</code> token).</p><p><strong>Fix:</strong> Always pass an explicit <code>algorithms</code> allowlist to <code>jwt.verify</code> and reject tokens with <code>alg: none</code>.</p></div>
+        <div class="rule"><div class="rule-head"><h3>JWT_SECRET_WEAK_OR_HARDCODED</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> A hardcoded or short JWT secret can be brute-forced or leaked through source control, letting attackers forge valid tokens.</p><p><strong>Fix:</strong> Load the signing secret from environment variables, use at least 32 bytes of entropy, and rotate it if it was ever hardcoded.</p></div>
+        <div class="rule"><div class="rule-head"><h3>JWT_NO_EXPIRATION</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Tokens signed without <code>expiresIn</code> remain valid forever, so a leaked token gives permanent access instead of a bounded window.</p><p><strong>Fix:</strong> Always set <code>expiresIn</code> when signing a JWT, and pair it with refresh-token rotation if long-lived sessions are needed.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Logging And Monitoring</h2>
+        <div class="rule"><div class="rule-head"><h3>LOGGING_SECRETS_RISK</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Logging tokens, passwords, full request bodies, or provider payloads can create a secondary data breach path.</p><p><strong>Fix:</strong> Redact secrets from logs and avoid logging full request bodies, authorization headers, cookies, payment payloads, and AI prompts unless explicitly scrubbed.</p></div>
+        <div class="rule"><div class="rule-head"><h3>MONITORING_ANOMALY_GAPS</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Without security and cost anomaly alerts, abuse can continue unnoticed after launch.</p><p><strong>Fix:</strong> Add alerts for failed login spikes, repeated 401/403s, sequential ID access, AI spend spikes, webhook failures, admin access, and error-rate increases.</p></div>
+        <div class="rule"><div class="rule-head"><h3>VERBOSE_ERROR_STACK_TRACE_TO_CLIENT</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Returning <code>err.stack</code> or a raw error message to the client can leak file paths, library versions, query fragments, or other internals useful for an attacker's reconnaissance.</p><p><strong>Fix:</strong> Log the full error server-side, and return a generic error message to the client.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>OAuth</h2>
+        <div class="rule"><div class="rule-head"><h3>OAUTH_STATE_PARAM_MISSING</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Without a <code>state</code> parameter, an OAuth authorization flow is vulnerable to CSRF, allowing an attacker to bind their own account to a victim's session.</p><p><strong>Fix:</strong> Generate a random <code>state</code> value per request, store it server-side or in a signed cookie, and verify it on callback before exchanging the authorization code.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Payments</h2>
+        <div class="rule"><div class="rule-head"><h3>PAYMENT_STRIPE_WEBHOOK_SIGNATURE_MISSING</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Attackers may forge payment events and unlock paid features or alter subscription state.</p><p><strong>Fix:</strong> Use <code>stripe.webhooks.constructEvent</code> with the raw request body and webhook signing secret before processing events.</p></div>
+        <div class="rule"><div class="rule-head"><h3>PAYMENT_IDEMPOTENCY_MISSING</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Repeated webhook delivery can duplicate side effects, corrupt subscription state, or issue duplicate credits.</p><p><strong>Fix:</strong> Store processed event IDs and make subscription updates idempotent.</p></div>
+        <div class="rule"><div class="rule-head"><h3>STRIPE_CLIENT_TRUSTED_AMOUNT</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> If a checkout or payment-intent handler reads the amount or price directly from the request body, a user can tamper with it client-side and pay any amount they choose.</p><p><strong>Fix:</strong> Always look up the price/amount server-side from a fixed price ID or your own product catalog — never trust a client-submitted amount.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Privacy</h2>
+        <div class="rule"><div class="rule-head"><h3>PRIVACY_DATA_COLLECTION_FOUND</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Collected personal data, AI prompts, analytics, and payment metadata need clear privacy policy disclosure and retention controls.</p><p><strong>Fix:</strong> Review the generated data inventory and publish a lawyer-reviewed privacy policy before public launch.</p></div>
+        <div class="rule"><div class="rule-head"><h3>PRIVACY_NO_DELETION_ENDPOINT</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> GDPR, CCPA, and similar regulations require a way for users to request deletion of their personal data; without one, the app cannot honor erasure requests.</p><p><strong>Fix:</strong> Add an account deletion flow (self-service or support-triggered) that removes or anonymizes personal data across all data stores.</p></div>
+        <div class="rule"><div class="rule-head"><h3>PRIVACY_THIRD_PARTY_TRACKING_NO_CONSENT</h3><span class="sev medium">medium</span></div><p><strong>Risk:</strong> Loading analytics, ads, or session-replay scripts before obtaining consent can violate GDPR/ePrivacy and similar cookie-consent requirements.</p><p><strong>Fix:</strong> Gate non-essential tracking scripts behind a cookie consent banner and only load them after opt-in where required.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>Secrets</h2>
+        <div class="rule"><div class="rule-head"><h3>SECRETS_ENV_COMMITTED</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Committed environment files can leak production credentials and third-party API keys.</p><p><strong>Fix:</strong> Remove real <code>.env</code> files from version control, rotate exposed secrets, and keep only <code>.env.example</code> committed.</p></div>
+        <div class="rule"><div class="rule-head"><h3>SECRETS_HARDCODED</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Hardcoded keys can be extracted from source code, logs, client bundles, or repository history.</p><p><strong>Fix:</strong> Move secrets to server-side environment variables, rotate exposed keys, and add secret scanning to CI.</p></div>
+        <div class="rule"><div class="rule-head"><h3>SECRETS_FRONTEND_PUBLIC_KEY</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Secrets in <code>NEXT_PUBLIC_*</code> variables or client components can be exposed to every browser user.</p><p><strong>Fix:</strong> Never expose OpenAI, Stripe secret, Supabase service role, or private API keys to frontend code. Move calls server-side or behind an authenticated proxy.</p></div>
+        <div class="rule"><div class="rule-head"><h3>CI_SECRETS_HARDCODED_IN_WORKFLOW</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Secrets committed inside a GitHub Actions or other CI workflow file are visible to anyone with repository read access and remain in git history even after removal.</p><p><strong>Fix:</strong> Reference secrets only through the CI provider's encrypted secret store (e.g. <code>${{ secrets.NAME }}</code>) and rotate any value that was ever hardcoded.</p></div>
+        <div class="rule"><div class="rule-head"><h3>HARDCODED_CLOUD_CREDENTIAL</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> An AWS access key (or similar cloud credential) committed to source code grants direct access to cloud infrastructure and is routinely scraped by automated bots within minutes of a public push.</p><p><strong>Fix:</strong> Remove the credential, rotate it immediately in the cloud provider console, and use environment variables or a secrets manager instead.</p></div>
+        <div class="rule"><div class="rule-head"><h3>EXPOSED_BACKUP_FILE</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> <code>.bak</code>, <code>.old</code>, <code>.backup</code>, or ad-hoc <code>.sql</code> dump files often contain full database contents or old credentials, and are easy to overlook when reviewing what's committed.</p><p><strong>Fix:</strong> Remove backup/dump files from version control and store backups outside the repository with proper access controls.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>SSRF</h2>
+        <div class="rule"><div class="rule-head"><h3>SSRF_UNVALIDATED_URL_FETCH</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Fetching a URL taken directly from request input lets an attacker make the server call internal services, cloud metadata endpoints, or arbitrary hosts.</p><p><strong>Fix:</strong> Validate outbound URLs against an allowlist of hosts/protocols, block private/link-local IP ranges, and avoid following redirects blindly.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>File Upload</h2>
+        <div class="rule"><div class="rule-head"><h3>UPLOAD_UNRESTRICTED_FILE_TYPE</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Accepting any file type or size lets attackers upload executable scripts, oversized payloads, or files that trigger downstream parser vulnerabilities.</p><p><strong>Fix:</strong> Validate MIME type and extension against an allowlist, enforce a maximum file size, and store uploads outside the web root or in object storage with restricted execution.</p></div>
+        <div class="rule"><div class="rule-head"><h3>UPLOAD_PATH_TRAVERSAL</h3><span class="sev critical">critical</span></div><p><strong>Risk:</strong> Writing a file using an attacker-supplied filename or path can overwrite arbitrary files via <code>../</code> traversal.</p><p><strong>Fix:</strong> Generate a server-side random filename, strip path separators, and write only inside a fixed, dedicated upload directory.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>WebSocket</h2>
+        <div class="rule"><div class="rule-head"><h3>WEBSOCKET_NO_AUTH</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> An unauthenticated WebSocket connection can let any client subscribe to real-time data or trigger actions meant for authenticated users only.</p><p><strong>Fix:</strong> Verify a session or token on connection (and on reconnection) before accepting subscriptions or forwarding messages.</p></div>
+      </div>
+
+      <div class="category">
+        <h2>XSS</h2>
+        <div class="rule"><div class="rule-head"><h3>XSS_UNSAFE_HTML</h3><span class="sev high">high</span></div><p><strong>Risk:</strong> Rendering user-controlled HTML without sanitization can execute attacker-controlled scripts.</p><p><strong>Fix:</strong> Avoid raw HTML rendering. If required, sanitize with a proven HTML sanitizer and use a strict CSP.</p></div>
+      </div>
+      <!-- RULES:END -->
+
+      <div class="contribute">
+        <h2>Contribute a rule</h2>
+        <p>Rules are Markdown, detectors are JavaScript. Add a rule block to the matching category file in <code>rules/</code>, add a matching detector in <code>src/rules.js</code>, and add a fixture test.</p>
+        <a class="btn btn-primary" href="https://github.com/sagaragarwal94/audit-saas/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Read the contribution guide →</a>
       </div>
 
     </div>

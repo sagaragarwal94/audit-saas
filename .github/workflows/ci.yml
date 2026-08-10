@@ -28,3 +28,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Verify rules.html matches rules/*.md
+        if: matrix.node-version == '20.x'
+        run: |
+          node scripts/generate-rules-page.mjs
+          git diff --exit-code site/rules.html || (echo "::error::site/rules.html is out of sync with rules/*.md — run 'node scripts/generate-rules-page.mjs' and commit" && exit 1)
