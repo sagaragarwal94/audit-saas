@@ -1,10 +1,17 @@
 # AuditSaas Pricing Plan
 
+> **Status: superseded / historical.** AuditSaas went open source under the
+> Functional Source License 1.1 shortly after this plan was written, ahead of
+> any pricing launch. Everything below reflects the "private beta → paid
+> tiers" strategy in effect at the time; it's kept as a record of the
+> thinking, but the "private beta" references and the near-term pricing
+> timeline no longer describe reality. Revisit if/when a hosted or paid
+> offering is actually pursued.
+
 ## Context
 
 - Product: a local CLI that audits SaaS codebases for security, privacy, AI-abuse, payments, and production-readiness gaps — **65 rules across 23 categories** as of this revision (up from 46/20; see "Rule coverage" below).
 - Runs 100% on the user's machine. No hosted backend, no database, no per-scan infra cost. The only external cost is the *user's own* AI-review API key/local LLM, which they pay for directly — not us.
-- Current state: private beta, invite-only, distributed as an npm tarball (`npm run beta:pack`) or repo access. No pricing or license enforcement exists yet.
 - Audience: solo founders and small teams shipping fast, often with AI coding assistants (Cursor, Claude Code, v0, Lovable, Bolt, etc.) — the "vibe-coding" crowd from the HN/PH/Twitter/Reddit launch copy.
 
 ## Rule coverage: is 65 rules enough?

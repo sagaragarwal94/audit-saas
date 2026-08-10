@@ -1,32 +1,28 @@
 # AuditSaas
 
-**Private beta.** This repository is not public. Access is by invitation only — see [Beta Access](#beta-access) below.
+[![CI](https://github.com/sagaragarwal94/audit-saas/actions/workflows/ci.yml/badge.svg)](https://github.com/sagaragarwal94/audit-saas/actions/workflows/ci.yml)
+[![License: FSL-1.1-ALv2](https://img.shields.io/badge/license-FSL--1.1--ALv2-blue)](./LICENSE)
 
 Local CLI that audits SaaS applications for security, privacy, AI, payments, production readiness, and launch-risk gaps.
 
 AuditSaas runs on your machine, scans your project files locally, and writes reports into your repo. No dashboard, account, license key, Auth0, RevenueCat, or hosted backend is required.
 
-## Beta Access
-
-AuditSaas is currently invite-only. Request access at [auditsaas.org](https://auditsaas.org) (or directly via the [beta form](https://tally.so/r/KYgbOk)).
-
-Once approved, you'll get one of two things by email, depending on how you're testing:
-
-- **Most testers:** an `auditsaas-<version>.tgz` install package. See Quick Start below — no repo access needed.
-- **Contributors adding rules:** a collaborator invite to this private repo instead. Clone it and follow [Development](#development).
-
-Send feedback, bugs, and false positives/negatives to the contact in your invite email.
+Source-available under the [Functional Source License 1.1](./LICENSE) (Apache-2.0 future grant) — free to use, modify, self-host, and contribute to; the one restriction is you can't repackage it into a competing commercial product or service. It auto-converts to the fully permissive Apache License 2.0 on 2028-08-10.
 
 ## Quick Start
 
-After you receive your install package by email:
-
 ```bash
-npm install -g ./auditsaas-<version>.tgz
-saas-audit scan /path/to/app --out-dir ./audit-output
+npx github:sagaragarwal94/audit-saas scan .
 ```
 
-That's it — `saas-audit` is now available anywhere on your machine. No git clone, no build step.
+No install step — the project has zero runtime dependencies. Or clone it if you want to contribute:
+
+```bash
+git clone https://github.com/sagaragarwal94/audit-saas
+cd audit-saas
+npm install
+npm test
+```
 
 ## CLI
 
@@ -79,13 +75,14 @@ saas-audit scan . --out-dir ./audit-output
 
 Use `--no-ai-review` or `AUDITSAAS_AI_REVIEW=false` to skip it. Full source code and keys stay on your machine; the AI reviewer sends only compact, redacted finding context to the configured provider.
 
-## Rule Contributions
+## Contributing
 
-Rules live in Markdown under `rules/` and are grouped by category. Add or edit rule files there, then run:
+Issues, new rules, and PRs are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) and the [issue templates](.github/ISSUE_TEMPLATE/). Rules live in Markdown under `rules/` and are grouped by category; every rule needs both a `rules/*.md` entry and a matching detector in `src/rules.js` — `npm test` enforces this via a parity check. After editing `rules/*.md`, run:
 
 ```bash
 npm test
 npm run fixture:scan
+npm run build:rules-page   # regenerates the public catalog at site/rules.html
 ```
 
 Good rule contributions include:
@@ -94,6 +91,10 @@ Good rule contributions include:
 - Practical evidence patterns.
 - A concrete recommendation.
 - A mapping to an existing category such as auth, API, payments, privacy, AI, headers, logging, secrets, database, or XSS.
+
+### Try the rule catalog without installing
+
+`.claude/skills/audit-saas-review/SKILL.md` is a [Claude Code Skill](https://github.com/sagaragarwal94/audit-saas/blob/main/.claude/skills/audit-saas-review/SKILL.md) that ships in this repo. Inside a Claude Code session in this repo (or any project with `rules/` copied in), run `/audit-saas-review` to have Claude manually review your code against the same rule catalog, using judgment rather than the CLI's regex detectors.
 
 ## Current Coverage
 
@@ -131,13 +132,13 @@ Good rule contributions include:
 
 **Today:** full-depth JavaScript/TypeScript — Node.js, Next.js, Remix, Express, Fastify, React, Vue — plus Docker, Docker Compose, and Terraform for infra.
 
-**Roadmap** (prioritized by beta feedback, not shipped speculatively): Python, Java, Kotlin, Swift, Rust, Go, native Android/iOS checks, and IaC providers beyond Terraform (Pulumi, CDK, CloudFormation). See `plan.md` for how this is sequenced.
+**Roadmap** (prioritized by community feedback, not shipped speculatively): Python, Java, Kotlin, Swift, Rust, Go, native Android/iOS checks, and IaC providers beyond Terraform (Pulumi, CDK, CloudFormation). See `plan.md` for how this is sequenced.
 
 ## Development
 
-For collaborators with repo access (not needed if you just want to run scans — see Quick Start):
-
 ```bash
+git clone https://github.com/sagaragarwal94/audit-saas
+cd audit-saas
 npm install
 npm test
 npm run scan
@@ -146,8 +147,8 @@ npm run scan
 npm run fixture:scan
 ```
 
-Package contents are limited with the `files` allowlist in `package.json`. Run `npm run beta:pack` to build the `.tgz` sent to new testers — it writes to `./dist-beta/` and only ever includes `bin/`, `src/`, `rules/`, `README.md`, `LICENSE`, and `NOTICE`.
+CI (`.github/workflows/ci.yml`) runs `npm test` on Node 20.x/22.x on every push/PR, plus a check that `site/rules.html` matches `rules/*.md`. Package contents are limited with the `files` allowlist in `package.json`; run `npm run pack` to build a local tarball (writes to `./dist/`).
 
 ## License
 
-Private beta license. Not open source. See `LICENSE` and `NOTICE`.
+[Functional Source License 1.1, ALv2 Future License](./LICENSE) (FSL-1.1-ALv2). Source-available: use, modify, self-host, and redistribute for any purpose other than a competing commercial product or service. Automatically converts to the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) on 2028-08-10. See `LICENSE` and `NOTICE`.
