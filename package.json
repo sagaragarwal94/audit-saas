@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Local CLI for SaaS security, privacy, AI, payments, and production readiness audits.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sagaragarwal94/audit-saas.git"
+  },
+  "homepage": "https://auditsaas.org",
+  "bugs": {
+    "url": "https://github.com/sagaragarwal94/audit-saas/issues"
+  },
   "bin": {
     "saas-audit": "./bin/saas-audit.js"
   },

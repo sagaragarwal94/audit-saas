@@ -1,6 +1,7 @@
 # AuditSaas
 
 [![CI](https://github.com/sagaragarwal94/audit-saas/actions/workflows/ci.yml/badge.svg)](https://github.com/sagaragarwal94/audit-saas/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/auditsaas.svg)](https://www.npmjs.com/package/auditsaas)
 [![License: FSL-1.1-ALv2](https://img.shields.io/badge/license-FSL--1.1--ALv2-blue)](./LICENSE)
 
 Local CLI that audits SaaS applications for security, privacy, AI, payments, production readiness, and launch-risk gaps.
@@ -12,10 +13,10 @@ Source-available under the [Functional Source License 1.1](./LICENSE) (Apache-2.
 ## Quick Start
 
 ```bash
-npx github:sagaragarwal94/audit-saas scan .
+npx auditsaas scan .
 ```
 
-No install step — the project has zero runtime dependencies. Or clone it if you want to contribute:
+No install step — the project has zero runtime dependencies. Not yet on npm for you? Run it straight from GitHub instead: `npx github:sagaragarwal94/audit-saas scan .`. Or clone it if you want to contribute:
 
 ```bash
 git clone https://github.com/sagaragarwal94/audit-saas
@@ -148,6 +149,10 @@ npm run fixture:scan
 ```
 
 CI (`.github/workflows/ci.yml`) runs `npm test` on Node 20.x/22.x on every push/PR, plus a check that `site/rules.html` matches `rules/*.md`. Package contents are limited with the `files` allowlist in `package.json`; run `npm run pack` to build a local tarball (writes to `./dist/`).
+
+### Releasing
+
+Publishing to npm (`.github/workflows/publish.yml`) is triggered by pushing a tag matching `v*.*.*` (or manually via `workflow_dispatch`), and requires an `NPM_TOKEN` repo secret (an npm Automation token). To cut a release: bump `version` in `package.json`, commit, then `git tag v<version> && git push --tags` — the workflow re-runs the tests, checks the tag matches `package.json`'s version, and publishes with provenance.
 
 ## License
 
