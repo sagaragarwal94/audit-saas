@@ -3,7 +3,7 @@ node_modules/
 .env.local
 audit-output/
 test-output/
-dist-beta/
+dist/
 auditsaas-run-history.md
 .release/
 .DS_Store

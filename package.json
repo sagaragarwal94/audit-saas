@@ -1,8 +1,7 @@
 {
   "name": "auditsaas",
   "version": "0.1.0",
-  "private": true,
-  "description": "Local CLI for SaaS security, privacy, AI, payments, and production readiness audits. Private beta.",
+  "description": "Local CLI for SaaS security, privacy, AI, payments, and production readiness audits.",
   "type": "module",
   "bin": {
     "saas-audit": "./bin/saas-audit.js"
@@ -11,6 +10,7 @@
     "bin/",
     "src/",
     "rules/",
+    ".claude/skills/",
     "README.md",
     "LICENSE",
     "NOTICE"
@@ -19,7 +19,8 @@
     "scan": "node ./bin/saas-audit.js scan .",
     "test": "node --test test/*.test.js",
     "fixture:scan": "node ./bin/saas-audit.js scan ./test/fixtures/vulnerable-app --out-dir ./test-output",
-    "beta:pack": "npm test && mkdir -p dist-beta && npm pack --pack-destination ./dist-beta"
+    "build:rules-page": "node ./scripts/generate-rules-page.mjs",
+    "pack": "npm test && mkdir -p dist && npm pack --pack-destination ./dist"
   },
   "keywords": [
     "security",
@@ -30,7 +31,7 @@
     "openai",
     "stripe"
   ],
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=20"
   }
