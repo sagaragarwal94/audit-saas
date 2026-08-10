@@ -4,16 +4,16 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>FAQ — AuditSaas</title>
-<meta name="description" content="Common questions about AuditSaas: what it checks, whether your code ever leaves your machine, how the private beta works, and how to get access." />
+<meta name="description" content="Common questions about AuditSaas: what it checks, whether your code ever leaves your machine, the license, and how to install it." />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="AuditSaas" />
 <meta property="og:title" content="AuditSaas FAQ" />
-<meta property="og:description" content="Common questions about AuditSaas: what it checks, whether your code ever leaves your machine, how the private beta works, and how to get access." />
+<meta property="og:description" content="Common questions about AuditSaas: what it checks, whether your code ever leaves your machine, the license, and how to install it." />
 <meta property="og:url" content="https://auditsaas.org/faq" />
 <meta property="og:image" content="https://auditsaas.org/og-image.png" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="AuditSaas FAQ" />
-<meta name="twitter:description" content="What it checks, whether your code ever leaves your machine, and how to get beta access." />
+<meta name="twitter:description" content="What it checks, whether your code ever leaves your machine, and how to install it." />
 <meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
 <link rel="stylesheet" href="styles.css" />
@@ -35,7 +35,7 @@
         <a href="/#features">Features</a>
         <a href="/rules">Rules</a>
         <a href="/faq">FAQ</a>
-        <a href="/#waitlist">Join Waitlist</a>
+        <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       </nav>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
         <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
@@ -66,18 +66,13 @@
       </div>
 
       <div class="faq-item">
-        <h3>Why is it invite-only right now?</h3>
-        <p>AuditSaas is in private beta. We're still tightening false-positive rates and expanding rule coverage, and we'd rather do that with a smaller group of real users giving direct feedback than with an open public launch.</p>
+        <h3>Is AuditSaas open source?</h3>
+        <p>Yes — source-available under the <a href="https://github.com/sagaragarwal94/audit-saas/blob/main/LICENSE" target="_blank" rel="noopener">Functional Source License 1.1</a>. You can use, modify, self-host, and redistribute it for any purpose except repackaging it into a competing commercial product or service. It automatically converts to the fully permissive Apache License 2.0 two years after this version was published (2028-08-10).</p>
       </div>
 
       <div class="faq-item">
-        <h3>How do I get access?</h3>
-        <p>Request access via the <a href="/#waitlist">waitlist form</a>. Once approved, we'll email you an install package — no GitHub account or repo access needed for most testers.</p>
-      </div>
-
-      <div class="faq-item">
-        <h3>What do I get after I'm approved?</h3>
-        <p>An <code>auditsaas-&lt;version&gt;.tgz</code> file by email. Install it with <code>npm install -g auditsaas-&lt;version&gt;.tgz</code>, then run <code>saas-audit scan .</code> in any project. That's the whole setup.</p>
+        <h3>How do I install it?</h3>
+        <p><code>npx github:sagaragarwal94/audit-saas scan .</code> — no install step (the project has zero runtime dependencies). Or clone the repo if you want to contribute: <code>git clone https://github.com/sagaragarwal94/audit-saas && cd audit-saas && npm install</code>.</p>
       </div>
 
       <div class="faq-item">
@@ -87,7 +82,7 @@
 
       <div class="faq-item">
         <h3>Is it free?</h3>
-        <p>Yes, during the private beta — there's no pricing yet. When AuditSaas exits beta, expect a free tier plus paid tiers for full rule coverage and team use; beta testers will be grandfathered in.</p>
+        <p>Yes. AuditSaas is free to use under the Functional Source License described above — the only thing you can't do is turn it into a competing commercial product.</p>
       </div>
 
       <div class="faq-item">
@@ -97,7 +92,7 @@
 
       <div class="faq-item">
         <h3>I think a finding is wrong (false positive/negative) — what do I do?</h3>
-        <p>Reply to your invite email or reach out at <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a> with the rule ID and a bit of context. False-positive reports are exactly what the beta is for.</p>
+        <p>Open an issue on <a href="https://github.com/sagaragarwal94/audit-saas/issues" target="_blank" rel="noopener">GitHub</a> or reach out at <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a> with the rule ID and a bit of context. False-positive reports directly shape what gets fixed next — see <a href="/feedback">Feedback &amp; feature requests</a>.</p>
       </div>
 
       <div class="faq-item">
@@ -106,14 +101,9 @@
       </div>
 
       <div class="faq-item">
-        <h3>Is AuditSaas open source?</h3>
-        <p>Not currently — it's a private beta under an all-rights-reserved license (see <a href="/terms">Terms</a>). This may change after the beta period.</p>
-      </div>
-
-      <div class="faq-item">
         <h3>What frameworks and stacks does it understand?</h3>
         <p>Today: JavaScript and TypeScript, full depth. It auto-detects common SaaS stacks — Next.js/Remix/Express/Fastify, Clerk/NextAuth/Supabase Auth/Firebase Auth, Prisma/Drizzle/Supabase/Mongo/Postgres/MySQL, Stripe/Paddle/Lemon Squeezy, OpenAI/Anthropic/Gemini/LangChain/Vercel AI SDK, and Docker/Terraform infra — then only runs the relevant rules.</p>
-        <p>Python, Java, Kotlin, Swift, Rust, Go, and native Android/iOS checks are on the roadmap, prioritized by beta demand rather than shipped speculatively.</p>
+        <p>Python, Java, Kotlin, Swift, Rust, Go, and native Android/iOS checks are on the roadmap, prioritized by community demand rather than shipped speculatively.</p>
       </div>
 
     </div>
@@ -122,8 +112,9 @@
 
 <footer class="footer">
   <div class="wrap footer-inner">
-    <span>© 2026 AuditSaas · Private beta</span>
+    <span>© 2026 AuditSaas · <a href="/terms">FSL-1.1-ALv2</a></span>
     <nav class="footer-links">
+      <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       <a href="/faq">FAQ</a>
       <a href="/changelog">Changelog</a>
       <a href="/feedback">Feedback</a>

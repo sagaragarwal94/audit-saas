@@ -4,16 +4,16 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>AuditSaas — Local security &amp; readiness audits for vibe-coded apps</title>
-<meta name="description" content="Private beta. A local CLI that audits SaaS apps for security, privacy, AI, payments, and production-readiness gaps. No dashboard, no account, no data leaves your machine." />
+<meta name="description" content="Open source. A local CLI that audits SaaS apps for security, privacy, AI, payments, and production-readiness gaps. No dashboard, no account, no data leaves your machine." />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="AuditSaas" />
 <meta property="og:title" content="AuditSaas — audit your vibe-coded SaaS before your users find the gaps" />
-<meta property="og:description" content="Private beta. A local CLI that audits SaaS apps for security, privacy, AI, payments, and production-readiness gaps. No dashboard, no account, no data leaves your machine." />
+<meta property="og:description" content="Open source. A local CLI that audits SaaS apps for security, privacy, AI, payments, and production-readiness gaps. No dashboard, no account, no data leaves your machine." />
 <meta property="og:url" content="https://auditsaas.org/" />
 <meta property="og:image" content="https://auditsaas.org/og-image.png" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="AuditSaas — audit your vibe-coded SaaS before your users find the gaps" />
-<meta name="twitter:description" content="Private beta. A local CLI that audits SaaS apps for security, privacy, AI, payments, and production-readiness gaps." />
+<meta name="twitter:description" content="Open source. A local CLI that audits SaaS apps for security, privacy, AI, payments, and production-readiness gaps." />
 <meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
 <link rel="stylesheet" href="styles.css" />
@@ -35,7 +35,7 @@
         <a href="#features">Features</a>
         <a href="/rules">Rules</a>
         <a href="/faq">FAQ</a>
-        <a href="#waitlist">Join Waitlist</a>
+        <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       </nav>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
         <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
@@ -47,7 +47,7 @@
 <main>
   <section class="hero">
     <div class="wrap">
-      <p class="eyebrow">Private beta · Runs 100% locally</p>
+      <p class="eyebrow">Open source · Runs 100% locally</p>
       <h1>Vibe-coded your SaaS? <br />Audit it before your users find the gaps.</h1>
       <p class="sub">
         AuditSaas is a local CLI that scans your codebase for security, privacy, AI-abuse,
@@ -55,8 +55,8 @@
         quietly skip. No signup, no dashboard, no code ever leaves your machine.
       </p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="#waitlist">Join the waitlist</a>
-        <a class="btn btn-ghost" href="#features">See what it checks</a>
+        <a class="btn btn-primary" href="#install">Get started</a>
+        <a class="btn btn-ghost" href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">View on GitHub</a>
       </div>
       <div class="code-block hero-code">
         <div class="code-head"><span></span><span></span><span></span></div>
@@ -129,7 +129,7 @@
     <div class="wrap install-inner">
       <div>
         <h2>Today, and where it's headed</h2>
-        <p class="section-sub">AuditSaas is built stack-first, not language-first — full depth on the JavaScript/TypeScript SaaS stack today, with broader language and platform coverage planned as beta feedback prioritizes it.</p>
+        <p class="section-sub">AuditSaas is built stack-first, not language-first — full depth on the JavaScript/TypeScript SaaS stack today, with broader language and platform coverage planned as community feedback prioritizes it.</p>
         <ul class="checklist">
           <li>JavaScript &amp; TypeScript — Node.js, Next.js, Remix, Express, Fastify</li>
           <li>Frontend frameworks — React, Vue, and framework-agnostic HTML/CSS checks</li>
@@ -138,7 +138,7 @@
         </ul>
       </div>
       <div>
-        <p class="section-sub">On the roadmap, prioritized by beta demand:</p>
+        <p class="section-sub">On the roadmap, prioritized by community demand:</p>
         <ul class="checklist">
           <li>Python, Java, Kotlin, Swift, Rust, Go</li>
           <li>Android &amp; iOS mobile app checks</li>
@@ -153,7 +153,7 @@
     <div class="wrap install-inner">
       <div>
         <h2>Get started in under a minute</h2>
-        <p class="section-sub">AuditSaas is invite-only right now. Request access above, and we'll email you an install package — no git clone, no build step, no account to create.</p>
+        <p class="section-sub">Open source and free to run. Point it at any project — it reads your code, writes Markdown and JSON reports into your repo, and does nothing else.</p>
         <ul class="checklist">
           <li>Works on any JavaScript/TypeScript codebase — Node.js, Next.js, React, Vue, and more — no config required</li>
           <li>Optional second-pass AI review with your own API key</li>
@@ -162,11 +162,13 @@
       </div>
       <div class="code-block">
         <div class="code-head"><span></span><span></span><span></span></div>
-        <pre><code># after your invite email arrives
-npm install -g auditsaas-&lt;version&gt;.tgz
-saas-audit scan /path/to/app --out-dir ./audit-output
+        <pre><code>npx github:sagaragarwal94/audit-saas scan .
 
-# or focus on one category
+# or, to contribute:
+git clone https://github.com/sagaragarwal94/audit-saas
+cd audit-saas && npm install && npm test
+
+# focus on one category
 saas-audit scan . --focus security
 saas-audit scan . --focus privacy
 saas-audit scan . --focus payments
@@ -211,15 +213,15 @@ saas-audit scan . --out-dir ./audit-output</code></pre>
     </div>
   </section>
 
-  <section id="waitlist" class="install">
+  <section id="contribute" class="install">
     <div class="wrap">
       <div class="waitlist-panel">
-        <h2>Request beta access</h2>
-        <p class="section-sub">AuditSaas is invite-only while we work through early feedback. Tell us a bit about your project and we'll send you access.</p>
-        <a class="btn btn-primary" href="https://tally.so/r/KYgbOk" target="_blank" rel="noopener">
-          Request access →
+        <h2>Contribute</h2>
+        <p class="section-sub">AuditSaas is source-available under the <a href="/terms">Functional Source License</a> — free to use, modify, and self-host, with one restriction: you can't repackage it into a competing commercial product or service. Issues, new rules, and PRs are all welcome.</p>
+        <a class="btn btn-primary" href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">
+          View on GitHub →
         </a>
-        <p class="waitlist-note">Or email us directly at <a href="mailto:beta@auditsaas.org">beta@auditsaas.org</a>.</p>
+        <p class="waitlist-note">Or read the <a href="https://github.com/sagaragarwal94/audit-saas/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">contribution guide</a> first.</p>
       </div>
     </div>
   </section>
@@ -227,8 +229,9 @@ saas-audit scan . --out-dir ./audit-output</code></pre>
 
 <footer class="footer">
   <div class="wrap footer-inner">
-    <span>© 2026 AuditSaas · Private beta</span>
+    <span>© 2026 AuditSaas · <a href="/terms">FSL-1.1-ALv2</a></span>
     <nav class="footer-links">
+      <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       <a href="/faq">FAQ</a>
       <a href="/changelog">Changelog</a>
       <a href="/feedback">Feedback</a>

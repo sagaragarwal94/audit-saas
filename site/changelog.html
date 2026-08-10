@@ -35,7 +35,7 @@
         <a href="/#features">Features</a>
         <a href="/rules">Rules</a>
         <a href="/faq">FAQ</a>
-        <a href="/#waitlist">Join Waitlist</a>
+        <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       </nav>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
         <span class="icon-light">🌙</span><span class="icon-dark">☀️</span>
@@ -56,6 +56,14 @@
   <section class="doc">
     <div class="wrap prose">
 
+      <h2>August 2026</h2>
+      <ul>
+        <li><strong>Open sourced</strong> under the <a href="https://github.com/sagaragarwal94/audit-saas/blob/main/LICENSE" target="_blank" rel="noopener">Functional Source License 1.1</a> (Apache-2.0 future grant) — the full rule catalog is public on <a href="/rules">/rules</a>, contributions are open, and CI runs on every PR.</li>
+        <li><strong>CI pipeline</strong> — tests run on Node 20.x/22.x on every push/PR, including a check that the markdown rule catalog and the JavaScript detectors never drift out of sync.</li>
+        <li><strong>Fixed the rule count</strong> — a parser bug meant one of the "66" advertised rules was actually a bogus entry parsed out of the contribution guide's example text. The real, correct count is 65.</li>
+        <li><strong>Closed 4 rules that had no detector</strong> — <code>OPEN_REDIRECT_UNVALIDATED</code>, <code>MASS_ASSIGNMENT_RISK</code>, <code>API_RATE_LIMIT_MISSING_PUBLIC</code>, and <code>GRAPHQL_INTROSPECTION_ENABLED</code> were documented but never actually implemented.</li>
+      </ul>
+
       <h2>July 2026</h2>
       <ul>
         <li><strong>Rule catalog grew to 65 rules across 23 categories</strong> (from 46/20) — added JWT expiration checks, non-cryptographic token randomness, OAuth CSRF (state parameter), unauthenticated WebSocket handlers, exposed Swagger UI and health-endpoint info leaks, npm install-time script risk, hardcoded cloud credentials, exposed backup files, public Terraform S3 buckets and open security groups, CSP unsafe-inline/eval, exposed production source maps, missing SRI on external scripts, Stripe client-trusted checkout amounts, unbounded list queries, GraphQL depth limiting, and unauthenticated Next.js Server Actions.</li>
@@ -67,7 +75,7 @@
       </ul>
 
       <h2>What's next</h2>
-      <p>Prioritized by beta feedback — see <a href="/feedback">Feedback &amp; feature requests</a> to weigh in, and the "Today, and where it's headed" section on the <a href="/#coverage">homepage</a> for the current roadmap (Python, Java, Kotlin, Swift, Rust, Go, Android/iOS, and real dependency CVE lookup).</p>
+      <p>Prioritized by community feedback — see <a href="/feedback">Feedback &amp; feature requests</a> to weigh in, and the "Today, and where it's headed" section on the <a href="/#coverage">homepage</a> for the current roadmap (Python, Java, Kotlin, Swift, Rust, Go, Android/iOS, and real dependency CVE lookup).</p>
 
     </div>
   </section>
@@ -75,8 +83,9 @@
 
 <footer class="footer">
   <div class="wrap footer-inner">
-    <span>© 2026 AuditSaas · Private beta</span>
+    <span>© 2026 AuditSaas · <a href="/terms">FSL-1.1-ALv2</a></span>
     <nav class="footer-links">
+      <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       <a href="/faq">FAQ</a>
       <a href="/changelog">Changelog</a>
       <a href="/feedback">Feedback</a>
