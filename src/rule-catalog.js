@@ -19,6 +19,10 @@ function readMarkdownFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) return readMarkdownFiles(fullPath);
+    // README.md is the contribution guide, not a rule category -- its
+    // fenced example block (## RULE_ID) would otherwise get parsed as a
+    // real (garbage) rule entry.
+    if (entry.name === "README.md") return [];
     return entry.isFile() && entry.name.endsWith(".md") ? [fullPath] : [];
   });
 }

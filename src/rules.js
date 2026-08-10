@@ -85,7 +85,7 @@ function findingForFile(ruleData, file, pattern, extra = {}) {
   };
 }
 
-const rules = [
+export const rules = [
   {
     id: "AUTH_PASSWORD_HASHING_WEAK",
     title: "Weak or missing password hashing evidence",
@@ -1029,6 +1029,68 @@ const rules = [
         .filter((file) => /\bexport\s+(async\s+)?function\b/.test(file.content))
         .filter((file) => !/auth\(|getServerSession|currentUser|getAuth|requireAuth|session\.user/i.test(file.content))
         .map((file) => findingForFile({}, file, /["']use server["']/, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "OPEN_REDIRECT_UNVALIDATED",
+    title: "Redirect target may be built from unvalidated user input",
+    category: "api",
+    severity: "medium",
+    risk: "Redirecting to a URL taken directly from a query parameter can be used for phishing or to bypass OAuth redirect_uri allowlists.",
+    recommendation: "Validate redirect targets against an allowlist of internal paths or trusted domains before redirecting.",
+    standards: ["OWASP Top 10: A01 Broken Access Control"],
+    detect(project) {
+      const pattern = /redirect\(\s*(req(uest)?\.(query|nextUrl\.searchParams\.get)|searchParams\.get|params\.)/i;
+      return filesWith(project, "api_route")
+        .filter((file) => pattern.test(file.content))
+        .filter((file) => !/allowlist|allowedRedirects|startsWith\(['"]\//i.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "MASS_ASSIGNMENT_RISK",
+    title: "Request body may be written directly into a database call",
+    category: "api",
+    severity: "high",
+    risk: "Spreading the raw request body into a create/update call lets attackers set fields they should not control, such as role, isAdmin, or plan.",
+    recommendation: "Explicitly allowlist the fields copied from request input into database writes instead of spreading the full body.",
+    codeExample: "const { name, email } = body; await db.user.update({ where: { id }, data: { name, email } });",
+    standards: ["OWASP Top 10: A04 Insecure Design", "OWASP API Security: Mass Assignment"],
+    detect(project) {
+      const pattern = /\.(create|update)\(\s*\{[^}]*data:\s*\{?\s*\.\.\.(body|req\.body)/is;
+      return filesWith(project, "api_route")
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
+    }
+  },
+  {
+    id: "API_RATE_LIMIT_MISSING_PUBLIC",
+    title: "Public API route may be missing rate limiting",
+    category: "api",
+    severity: "medium",
+    risk: "Endpoints without any rate limiting are vulnerable to scraping, credential stuffing, and cost-driving abuse at scale.",
+    recommendation: "Add per-IP and per-account rate limiting (e.g. Upstash, express-rate-limit, a WAF rule) to public-facing API routes.",
+    standards: ["OWASP API Security: Unrestricted Resource Consumption"],
+    detect(project) {
+      const apiRoutes = filesWith(project, "api_route");
+      if (apiRoutes.length === 0) return [];
+      const hasAnyRateLimit = apiRoutes.some((file) => /rateLimit|limiter|upstash|slowDown/i.test(file.content));
+      return hasAnyRateLimit ? [] : [{ confidence: "low", evidence: `${apiRoutes.length} API route(s) found with no rate-limiting library detected anywhere in the project` }];
+    }
+  },
+  {
+    id: "GRAPHQL_INTROSPECTION_ENABLED",
+    title: "GraphQL introspection may be enabled in production",
+    category: "api",
+    severity: "medium",
+    risk: "Introspection lets attackers enumerate your entire schema, including fields and mutations not exposed in your app's UI.",
+    recommendation: "Disable introspection (and the GraphiQL/Playground UI) outside of development environments.",
+    standards: ["OWASP API Security: Security Misconfiguration"],
+    detect(project) {
+      return sourceFiles(project)
+        .filter((file) => /ApolloServer|graphqlHTTP|createYoga/i.test(file.content))
+        .filter((file) => !/introspection:\s*(false|process\.env)|NODE_ENV\s*!==?\s*['"]production['"]/i.test(file.content))
+        .map((file) => findingForFile({}, file, /ApolloServer|graphqlHTTP|createYoga/i, { confidence: "low" }));
     }
   },
   {
