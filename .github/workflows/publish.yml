@@ -16,10 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Trusted publishing (OIDC) requires npm CLI >=11.5.1, which needs
+      # Node >=22.14 -- newer than this project's own >=20 engines
+      # requirement, but that's fine, this only affects the release job.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version: "22.14.0"
           registry-url: "https://registry.npmjs.org"
+
+      - run: npm install -g npm@latest
 
       - run: npm ci
       - run: npm test
@@ -34,7 +39,10 @@ jobs:
             exit 1
           fi
 
+      # No NPM_TOKEN needed: this uses npm Trusted Publishing (OIDC), which
+      # must be configured on the package's npmjs.com settings page first
+      # (org/user, repo, workflow filename "publish.yml", allowed action
+      # "npm publish") -- and that page only exists after the package has
+      # been published at least once. See README's Releasing section.
       - name: Publish to npm
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
