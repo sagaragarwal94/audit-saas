@@ -152,7 +152,15 @@ CI (`.github/workflows/ci.yml`) runs `npm test` on Node 20.x/22.x on every push/
 
 ### Releasing
 
-Publishing to npm (`.github/workflows/publish.yml`) is triggered by pushing a tag matching `v*.*.*` (or manually via `workflow_dispatch`), and requires an `NPM_TOKEN` repo secret (an npm Automation token). To cut a release: bump `version` in `package.json`, commit, then `git tag v<version> && git push --tags` — the workflow re-runs the tests, checks the tag matches `package.json`'s version, and publishes with provenance.
+Publishing to npm (`.github/workflows/publish.yml`) uses [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (OIDC) — no `NPM_TOKEN` secret, no long-lived credentials. This requires a one-time bootstrap since a package's Trusted Publisher can only be configured *after* it's been published at least once:
+
+1. **First release only** — publish manually from your own machine, where `npm login`'s normal 2FA prompt handles auth (this is what a CI token can't do without also enabling 2FA-bypass, which trusted publishing avoids entirely):
+   ```bash
+   npm login
+   npm publish --access public
+   ```
+2. On the package's [npmjs.com settings page](https://www.npmjs.com/package/auditsaas/access), add a Trusted Publisher: provider GitHub Actions, org/user `sagaragarwal94`, repo `audit-saas`, workflow filename `publish.yml`, allowed action `npm publish`.
+3. **Every release after that**: bump `version` in `package.json`, commit, then `git tag v<version> && git push --tags` — the workflow re-runs the tests, checks the tag matches `package.json`'s version, and publishes via OIDC automatically.
 
 ## License
 
