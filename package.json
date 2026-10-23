@@ -12,8 +12,8 @@
     "url": "https://github.com/sagaragarwal94/audit-saas/issues"
   },
   "bin": {
-    "saas-audit": "./bin/saas-audit.js",
-    "auditsaas": "./bin/saas-audit.js"
+    "saas-audit": "bin/saas-audit.js",
+    "auditsaas": "bin/saas-audit.js"
   },
   "files": [
     "bin/",
@@ -30,7 +30,8 @@
     "test": "node --test test/*.test.js",
     "fixture:scan": "node ./bin/saas-audit.js scan ./test/fixtures/vulnerable-app --out-dir ./test-output --no-history",
     "build:rules-page": "node ./scripts/generate-rules-page.mjs",
-    "pack": "npm test && mkdir -p dist && npm pack --pack-destination ./dist"
+    "pack": "npm test && mkdir -p dist && npm pack --pack-destination ./dist",
+    "smoke:package": "node ./scripts/smoke-package.mjs"
   },
   "keywords": [
     "security",

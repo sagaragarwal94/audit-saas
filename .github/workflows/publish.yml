@@ -60,6 +60,9 @@ jobs:
             console.log(files.length + " files OK");
           ' "$RUNNER_TEMP/pack.json"
 
+      - name: Package smoke test
+        run: node scripts/smoke-package.mjs
+
       # No NPM_TOKEN needed: this uses npm Trusted Publishing (OIDC), which
       # must be configured on the package's npmjs.com settings page first
       # (org/user, repo, workflow filename "publish.yml", allowed action
