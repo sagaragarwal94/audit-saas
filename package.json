@@ -1,6 +1,6 @@
 {
   "name": "auditsaas",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local CLI for SaaS security, privacy, AI, payments, and production readiness audits.",
   "type": "module",
   "repository": {
@@ -12,7 +12,8 @@
     "url": "https://github.com/sagaragarwal94/audit-saas/issues"
   },
   "bin": {
-    "saas-audit": "./bin/saas-audit.js"
+    "saas-audit": "./bin/saas-audit.js",
+    "auditsaas": "./bin/saas-audit.js"
   },
   "files": [
     "bin/",
@@ -24,9 +25,10 @@
     "NOTICE"
   ],
   "scripts": {
-    "scan": "node ./bin/saas-audit.js scan .",
+    "scan": "node ./bin/saas-audit.js scan . --no-history",
+    "self-scan": "node ./bin/saas-audit.js scan . --no-history --no-ai-review --out-dir ./audit-output",
     "test": "node --test test/*.test.js",
-    "fixture:scan": "node ./bin/saas-audit.js scan ./test/fixtures/vulnerable-app --out-dir ./test-output",
+    "fixture:scan": "node ./bin/saas-audit.js scan ./test/fixtures/vulnerable-app --out-dir ./test-output --no-history",
     "build:rules-page": "node ./scripts/generate-rules-page.mjs",
     "pack": "npm test && mkdir -p dist && npm pack --pack-destination ./dist"
   },
@@ -36,6 +38,9 @@
     "saas",
     "owasp",
     "privacy",
+    "sarif",
+    "security-scanner",
+    "nextjs",
     "openai",
     "stripe"
   ],

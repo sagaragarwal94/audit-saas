@@ -1,12 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { severityRank } from "./findings.js";
+import { redactSecrets } from "./redact.js";
+
+export { redactSecrets } from "./redact.js";
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
-const SECRET_PATTERNS = [
-  /(?:api[_-]?key|secret|token|password|private[_-]?key)\s*[:=]\s*["']?[^"'\s,}]+/gi,
-  /\b(sk|pk|rk|ghp|gho|ghu|ghs|glpat)_[A-Za-z0-9_-]{12,}\b/g,
-  /\b[A-Za-z0-9+/]{32,}={0,2}\b/g,
-];
+const DEFAULT_TIMEOUT_MS = 120_000;
 
 export function resolveAiReviewConfig({ env = process.env, modelOverride, disabled = false } = {}) {
   if (disabled || isFalse(env.AUDITSAAS_AI_REVIEW)) return { enabled: false, reason: "disabled" };
@@ -20,11 +20,13 @@ export function resolveAiReviewConfig({ env = process.env, modelOverride, disabl
   // not require one.
   if (!apiKey && !baseUrl) return { enabled: false, reason: "missing_config" };
 
+  const timeoutMs = Number.parseInt(env.AUDITSAAS_LLM_TIMEOUT_MS || "", 10);
   return {
     enabled: true,
     apiKey: apiKey || "local",
     model,
     baseUrl: baseUrl || DEFAULT_BASE_URL,
+    timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_TIMEOUT_MS,
   };
 }
 
@@ -104,41 +106,53 @@ export function buildAiReviewInput(audit, { projectName } = {}) {
   };
 }
 
-export function redactSecrets(value) {
-  let output = String(value || "");
-  for (const pattern of SECRET_PATTERNS) output = output.replace(pattern, "[REDACTED]");
-  return output;
-}
-
 async function requestOpenAiCompatibleReview({ config, reviewInput, fetchImpl }) {
-  const response = await fetchImpl(chatCompletionsUrl(config.baseUrl), {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${config.apiKey}`,
-      "content-type": "application/json",
+  const messages = [
+    {
+      role: "system",
+      content: "You are AuditSaas's senior SaaS security audit reviewer. Review deterministic scanner output. Do not claim to have seen full source code. Be concise, practical, and specific.",
     },
-    body: JSON.stringify({
-      model: config.model,
-      temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content: "You are AuditSaas's senior SaaS security audit reviewer. Review deterministic scanner output. Do not claim to have seen full source code. Be concise, practical, and specific.",
-        },
-        {
-          role: "user",
-          content: `Review this local scanner output and return Markdown with sections: Executive Summary, Top Risks, Likely False Positives, Fix Order, Launch Readiness Verdict.\n\n${JSON.stringify(reviewInput, null, 2)}`,
-        },
-      ],
-    }),
-  });
+    {
+      role: "user",
+      content: `Review this local scanner output and return Markdown with sections: Executive Summary, Top Risks, Likely False Positives, Fix Order, Launch Readiness Verdict.\n\n${JSON.stringify(reviewInput, null, 2)}`,
+    },
+  ];
 
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error?.message || data.message || `LLM request failed with ${response.status}`);
+  let { response, data } = await postChatCompletion({ config, fetchImpl, body: { model: config.model, temperature: 0.2, messages } });
+  // Reasoning models reject any non-default temperature; retry once without it.
+  if (!response.ok && /temperature/i.test(errorMessage(data))) {
+    ({ response, data } = await postChatCompletion({ config, fetchImpl, body: { model: config.model, messages } }));
+  }
+  if (!response.ok) throw new Error(errorMessage(data) || `LLM request failed with ${response.status}`);
 
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error("LLM response did not include review content");
   return redactSecrets(content);
+}
+
+async function postChatCompletion({ config, fetchImpl, body }) {
+  const timeoutMs = config.timeoutMs || DEFAULT_TIMEOUT_MS;
+  let response;
+  try {
+    response = await fetchImpl(chatCompletionsUrl(config.baseUrl), {
+      method: "POST",
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: {
+        authorization: `Bearer ${config.apiKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    if (error?.name === "TimeoutError") throw new Error(`LLM request timed out after ${timeoutMs}ms (set AUDITSAAS_LLM_TIMEOUT_MS to raise it)`);
+    throw new Error(`Could not reach LLM endpoint ${config.baseUrl}: ${error?.cause?.message || error?.message || error}`);
+  }
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+}
+
+function errorMessage(data) {
+  return data?.error?.message || data?.message || "";
 }
 
 async function writeAiReviewFiles(outDir, review, reviewInput) {
@@ -170,10 +184,6 @@ function summarizeReview(content) {
 function chatCompletionsUrl(baseUrl) {
   const trimmed = String(baseUrl || DEFAULT_BASE_URL).replace(/\/$/, "");
   return trimmed.endsWith("/chat/completions") ? trimmed : `${trimmed}/chat/completions`;
-}
-
-function severityRank(severity) {
-  return { critical: 0, high: 1, medium: 2, low: 3, info: 4 }[severity] ?? 5;
 }
 
 function isFalse(value) {

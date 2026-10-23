@@ -56,6 +56,21 @@
   <section class="doc">
     <div class="wrap prose">
 
+      <h2>October 2026 — v0.2.0</h2>
+      <ul>
+        <li><strong>Real evidence in every finding</strong>: reports now show the actual line of your code that matched, with the file and line, instead of the detector's pattern. Secrets, <code>.env</code> values, and credentials inside connection strings are redacted before anything is written.</li>
+        <li><strong>CI gating</strong>: <code>--fail-on high</code> exits non-zero when findings meet the threshold, <code>--json</code> prints machine-readable output, and invalid flags or values exit with code 2 instead of being silently ignored.</li>
+        <li><strong>Suppressions and config</strong>: use <code>// auditsaas-ignore RULE_ID -- reason</code> inline, <code>auditsaas-ignore-file</code> for a whole file, or <code>.auditsaas.json</code> with <code>ignorePaths</code>, <code>ignoreRules</code>, <code>failOn</code>, and <code>focus</code>. Suppressed findings stay listed in the report.</li>
+        <li><strong>Baselines</strong>: <code>--baseline findings.json</code> reports only new findings. Fingerprints are keyed on the matched code, not line numbers, so they survive unrelated edits.</li>
+        <li><strong>Better SARIF</strong>: stable fingerprints, GitHub <code>security-severity</code> scores, rule help links to <a href="/rules">/rules</a>, and project-wide findings anchored to <code>package.json</code> so code scanning doesn't drop them.</li>
+        <li><strong>Far fewer false positives</strong>: Markdown docs no longer trigger code rules; SVG <code>xmlns</code> URLs aren't "insecure HTTP"; parameterized <code>sql`...${id}`</code> tagged templates aren't SQL injection; reading a cookie isn't treated as setting one; login/webhook routes aren't flagged for missing auth; middleware-based auth lowers confidence; Stripe-publishable/Supabase-anon/Firebase keys aren't "exposed secrets"; placeholder keys and AWS's documented example key are ignored. The data inventory no longer counts README prose or matches <code>ip</code> inside words like "script".</li>
+        <li><strong>Caught what it used to miss</strong>: weak password hashing and missing login rate limits in route handlers outside an <code>auth/</code> folder; frontend secret exposure through <code>VITE_</code>, <code>EXPO_PUBLIC_</code>, <code>REACT_APP_</code>, <code>NUXT_PUBLIC_</code>, and <code>PUBLIC_</code> variables; Anthropic, GitHub, and Slack tokens and private-key blocks; <code>compose.yaml</code>, <code>bun.lock</code>, gzipped SQL dumps; and <code>.vue</code>, <code>.svelte</code>, and <code>.astro</code> files.</li>
+        <li><strong>Robustness</strong>: unreadable directories, binary files, and symlinks no longer crash or derail a scan; a failing detector is reported and skipped; <code>--url</code> checks follow redirects (http→https counts as HTTPS) and time out after 15s; the AI review times out, retries models that reject <code>temperature</code>, and never blocks the deterministic reports.</li>
+        <li><strong>New</strong>: a <code>saas-audit rules</code> command, an <code>auditsaas</code> binary alias, a <code>--no-history</code> flag, and a top-findings list in the terminal summary. Each rule on <a href="/rules">/rules</a> now has a linkable anchor.</li>
+        <li><strong>Claude Code skill</strong>: <code>/audit-saas-review</code> now traces auth and data paths across files, runs a verification pass before reporting, honors your suppressions, and reports what it covered and what it skipped.</li>
+        <li><strong>CI</strong>: tested on Node 20, 22, and 24, and the scanner now scans its own repo on every push.</li>
+      </ul>
+
       <h2>August 2026</h2>
       <ul>
         <li><strong>Open sourced</strong> under the <a href="https://github.com/sagaragarwal94/audit-saas/blob/main/LICENSE" target="_blank" rel="noopener">Functional Source License 1.1</a> (Apache-2.0 future grant) — the full rule catalog is public on <a href="/rules">/rules</a>, contributions are open, and CI runs on every PR.</li>

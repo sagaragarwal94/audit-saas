@@ -28,30 +28,102 @@ npm test
 ## CLI
 
 ```bash
+saas-audit scan [path] [options]      # also available as `auditsaas`
+saas-audit rules [--json]             # list the rule catalog
 saas-audit --version
-saas-audit scan .
-saas-audit scan . --name "My App"
-saas-audit scan . --out-dir ./audit-output
-saas-audit scan . --focus security
-saas-audit scan . --focus privacy
-saas-audit scan . --focus payments
-saas-audit scan . --focus ai
-saas-audit scan . --url https://app.example.com
 ```
+
+| Option | What it does |
+|---|---|
+| `--name "My App"` | Project name used in reports |
+| `--out-dir ./audit-output` | Where reports are written (default `./audit-output`) |
+| `--focus security\|privacy\|payments\|ai\|all` | Limit which rule categories run |
+| `--url https://app.example.com` | Also check HTTPS and security headers on a live URL (follows redirects, 15s timeout) |
+| `--fail-on critical\|high\|medium\|low\|info\|none` | Exit `1` if any finding is at or above that severity |
+| `--baseline old/findings.json` | Only report findings that aren't in a previous scan |
+| `--config path/.auditsaas.json` | Use a specific config file (default: `<path>/.auditsaas.json` if present) |
+| `--json` | Print the full result as JSON on stdout; progress goes to stderr |
+| `--no-history` | Don't append to `auditsaas-run-history.md` in the scanned project |
+| `--ai-model <model>` / `--no-ai-review` | Override or skip the optional AI review |
+
+Unknown flags and invalid values are rejected instead of silently ignored. Exit codes: `0` success, `1` findings at/above `--fail-on` (or an internal error), `2` invalid usage or config.
+
+## Use It in CI
+
+```yaml
+# .github/workflows/auditsaas.yml
+name: AuditSaas
+on: [push, pull_request]
+permissions:
+  contents: read
+  security-events: write   # only needed for the SARIF upload
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npx auditsaas@latest scan . --no-history --no-ai-review --fail-on high
+      - if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: audit-output/findings.sarif.json
+          category: auditsaas
+```
+
+The SARIF output includes stable fingerprints, `security-severity` scores, and links to each rule on [auditsaas.org/rules](https://auditsaas.org/rules), so findings show up in GitHub's Security tab with the right severity and don't duplicate across runs.
+
+Adopting on an existing codebase? Commit a baseline once, then fail only on new findings:
+
+```bash
+npx auditsaas scan . --out-dir .auditsaas-baseline --no-history
+npx auditsaas scan . --baseline .auditsaas-baseline/findings.json --fail-on high
+```
+
+Fingerprints are keyed on rule, file, and the matched code, not on line numbers, so unrelated edits above a finding don't make it "new". A baselined run's `findings.json` and SARIF still contain every current finding, each tagged with `baselineState` (`new` or `unchanged`), so you can promote the latest output to be the next baseline. Only `new` findings count toward the summary and `--fail-on`.
+
+## Configuration and Suppressions
+
+Optional `.auditsaas.json` in the project root:
+
+```json
+{
+  "ignorePaths": ["test/fixtures/**", "scripts/seed.ts", "*.min.js"],
+  "ignoreRules": ["MONITORING_ANOMALY_GAPS"],
+  "failOn": "high",
+  "focus": "all"
+}
+```
+
+`ignorePaths` uses gitignore-style globs and those files aren't scanned at all. CLI flags override config values. Unknown keys and malformed JSON are errors, so a typo can't quietly disable your suppressions.
+
+Suppress a single finding in code, ideally with a reason:
+
+```ts
+const html = renderMarkdown(post.body); // sanitized by rehype-sanitize
+// auditsaas-ignore XSS_UNSAFE_HTML -- output of rehype-sanitize
+return <div dangerouslySetInnerHTML={{ __html: html }} />;
+```
+
+`auditsaas-ignore` applies to its own line and the next line; `auditsaas-ignore-file RULE_ID` applies to the whole file; omitting the rule ID suppresses every rule. Suppressed findings stay visible in a "Suppressed Findings" table at the end of `audit-report.md`, so they don't disappear from review entirely.
 
 ## Deliverables
 
 Each scan writes:
 
-- `audit-report.md`
-- `findings.json`
-- `findings.sarif.json` (SARIF 2.1.0, for GitHub code scanning and other CI tooling)
-- `priority-action-plan.md`
+- `audit-report.md`: findings with the matched code line, file:line, confidence, and fix guidance
+- `findings.json`: machine-readable findings, each with a stable `fingerprint`
+- `findings.sarif.json`: SARIF 2.1.0, for GitHub code scanning and other CI tooling
+- `priority-action-plan.md`: a checklist ordered by severity
 - `privacy-policy-draft.md`
 - `data-inventory.md`
 - `production-readiness-checklist.md`
-- `auditsaas-run-history.md` in the scanned project
+- `auditsaas-run-history.md` in the scanned project (skip with `--no-history`)
 - `ai-review.md` when local AI reviewer config is enabled
+
+Evidence is the actual line of your code that matched, secret-redacted. Values from `.env` files and credentials in connection strings are never echoed into reports.
 
 ## Optional AI Review
 
@@ -61,7 +133,7 @@ Hosted provider with your own key:
 
 ```bash
 export AUDITSAAS_LLM_API_KEY=your-provider-key
-export AUDITSAAS_LLM_MODEL=gpt-4.1-mini
+export AUDITSAAS_LLM_MODEL=your-model-id
 export AUDITSAAS_LLM_BASE_URL=https://api.openai.com/v1
 saas-audit scan . --out-dir ./audit-output
 ```
@@ -74,7 +146,7 @@ export AUDITSAAS_LLM_MODEL=llama3.1
 saas-audit scan . --out-dir ./audit-output
 ```
 
-Use `--no-ai-review` or `AUDITSAAS_AI_REVIEW=false` to skip it. Full source code and keys stay on your machine; the AI reviewer sends only compact, redacted finding context to the configured provider.
+Use `--no-ai-review` or `AUDITSAAS_AI_REVIEW=false` to skip it. Requests time out after 120s (`AUDITSAAS_LLM_TIMEOUT_MS` to change), and models that reject a custom `temperature` are retried without it. If the review fails, the deterministic reports are still written. Full source code and keys stay on your machine; the AI reviewer sends only compact, redacted finding context to the configured provider.
 
 ## Contributing
 
@@ -95,7 +167,7 @@ Good rule contributions include:
 
 ### Try the rule catalog without installing
 
-`.claude/skills/audit-saas-review/SKILL.md` is a [Claude Code Skill](https://github.com/sagaragarwal94/audit-saas/blob/main/.claude/skills/audit-saas-review/SKILL.md) that ships in this repo. Inside a Claude Code session in this repo (or any project with `rules/` copied in), run `/audit-saas-review` to have Claude manually review your code against the same rule catalog, using judgment rather than the CLI's regex detectors.
+`.claude/skills/audit-saas-review/SKILL.md` is a [Claude Code Skill](https://github.com/sagaragarwal94/audit-saas/blob/main/.claude/skills/audit-saas-review/SKILL.md) that ships in this repo. Inside a Claude Code session in this repo, in a project with `auditsaas` installed, or in any project with `rules/` copied in, run `/audit-saas-review [security|privacy|payments|ai|all]`. Claude manually reviews your code against the same rule catalog, traces auth and data paths across files, runs a verification pass to drop false positives, and honors your `.auditsaas.json` and `auditsaas-ignore` suppressions. It's read-only and pairs well with the CLI: let the CLI give the repeatable baseline, and let the skill triage what it found.
 
 ## Current Coverage
 
@@ -131,7 +203,7 @@ Good rule contributions include:
 
 ## Language & Platform Coverage
 
-**Today:** full-depth JavaScript/TypeScript — Node.js, Next.js, Remix, Express, Fastify, React, Vue — plus Docker, Docker Compose, and Terraform for infra.
+**Today:** full-depth JavaScript/TypeScript — Node.js, Next.js, Remix, Express, Fastify, Hono, React, Vue, Svelte/SvelteKit, Astro (including `.vue`/`.svelte`/`.astro` single-file components) — plus Docker, Docker Compose, and Terraform for infra.
 
 **Roadmap** (prioritized by community feedback, not shipped speculatively): Python, Java, Kotlin, Swift, Rust, Go, native Android/iOS checks, and IaC providers beyond Terraform (Pulumi, CDK, CloudFormation). See `plan.md` for how this is sequenced.
 
@@ -148,7 +220,7 @@ npm run scan
 npm run fixture:scan
 ```
 
-CI (`.github/workflows/ci.yml`) runs `npm test` on Node 20.x/22.x on every push/PR, plus a check that `site/rules.html` matches `rules/*.md`. Package contents are limited with the `files` allowlist in `package.json`; run `npm run pack` to build a local tarball (writes to `./dist/`).
+CI (`.github/workflows/ci.yml`) runs `npm test` on Node 20.x/22.x/24.x on every push/PR, checks that `site/rules.html` matches `rules/*.md`, and dogfoods the scanner on this repo (`npm run self-scan`, configured by `.auditsaas.json`), failing on any high or critical finding and uploading SARIF to code scanning. Package contents are limited with the `files` allowlist in `package.json`; run `npm run pack` to build a local tarball (writes to `./dist/`).
 
 ### Releasing
 

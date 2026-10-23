@@ -1,12 +1,15 @@
+// auditsaas-ignore-file -- data-classification patterns, not application code
+import { isLockfile } from "./scanner.js";
+
 const DATA_PATTERNS = [
   ["Email address", /email/i, "Signup/profile/contact forms, auth, or payment flows"],
   ["Name", /\b(firstName|lastName|fullName|name)\b/i, "Profile, billing, or onboarding forms"],
-  ["Phone number", /phone|tel/i, "Contact, billing, or onboarding forms"],
+  ["Phone number", /phone|\btel\b|type=["']tel["']/i, "Contact, billing, or onboarding forms"],
   ["Billing/payment metadata", /stripe|checkout|subscription|invoice|payment/i, "Payment provider integration"],
   ["AI prompts and outputs", /prompt|message|chat|openai|anthropic|generateText|streamText/i, "AI feature inputs and generated outputs"],
   ["Uploaded files", /upload|file|multipart|formData/i, "File upload or document processing"],
   ["Analytics and usage events", /posthog|analytics|gtag|mixpanel|amplitude|track\(/i, "Analytics SDK or event tracking"],
-  ["IP/device/browser data", /ip|userAgent|headers\(|request\.headers|geo/i, "Request logs, analytics, security controls"],
+  ["IP/device/browser data", /\bip(Address)?\b|x-forwarded-for|x-real-ip|userAgent|user-agent|request\.headers|headers\(\)|\bgeo\b/i, "Request logs, analytics, security controls"],
   ["Cookies and browser storage", /localStorage|sessionStorage|cookie/i, "Browser-side persistence"],
   ["Error and diagnostic data", /sentry|logger|console\.error|datadog|axiom/i, "Logging or error monitoring"]
 ];
@@ -25,10 +28,18 @@ const THIRD_PARTIES = [
   ["Datadog", /datadog/i]
 ];
 
+// Prose docs and lockfiles describe or pin code; they don't collect data.
+function inventoryFiles(project) {
+  return project.files.filter((file) =>
+    !/\.(md|mdx)$/i.test(file.relativePath) && !isLockfile(file.relativePath)
+  );
+}
+
 export function buildDataInventory(project) {
   const inventory = [];
+  const files = inventoryFiles(project);
   for (const [dataType, pattern, defaultSource] of DATA_PATTERNS) {
-    const matches = project.files.filter((file) => pattern.test(file.relativePath) || pattern.test(file.content));
+    const matches = files.filter((file) => pattern.test(file.relativePath) || pattern.test(file.content));
     if (matches.length === 0) continue;
     inventory.push({
       dataType,

@@ -176,7 +176,10 @@ cd audit-saas && npm install && npm test
 saas-audit scan . --focus security
 saas-audit scan . --focus privacy
 saas-audit scan . --focus payments
-saas-audit scan . --focus ai</code></pre>
+saas-audit scan . --focus ai
+
+# gate CI on high/critical findings
+saas-audit scan . --fail-on high --no-history</code></pre>
       </div>
     </div>
   </section>

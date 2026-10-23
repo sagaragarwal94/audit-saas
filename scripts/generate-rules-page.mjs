@@ -65,7 +65,7 @@ function inlineMarkdown(value) {
 }
 
 function renderRule(rule) {
-  return `        <div class="rule"><div class="rule-head"><h3>${rule.id}</h3><span class="sev ${rule.severity}">${rule.severity}</span></div><p><strong>Risk:</strong> ${inlineMarkdown(rule.risk)}</p><p><strong>Fix:</strong> ${inlineMarkdown(rule.fix)}</p></div>`;
+  return `        <div class="rule" id="${rule.id}"><div class="rule-head"><h3><a href="#${rule.id}">${rule.id}</a></h3><span class="sev ${rule.severity}">${rule.severity}</span></div><p><strong>Risk:</strong> ${inlineMarkdown(rule.risk)}</p><p><strong>Fix:</strong> ${inlineMarkdown(rule.fix)}</p></div>`;
 }
 
 function renderCategory({ title, rules }) {
