@@ -16,14 +16,9 @@
 <meta name="twitter:description" content="Report a false positive, request a new rule, or suggest a feature for AuditSaas." />
 <meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
-<link rel="stylesheet" href="styles.css" />
-<script>
-  (function () {
-    var stored = localStorage.getItem("theme");
-    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    document.documentElement.dataset.theme = theme;
-  })();
-</script>
+<link rel="canonical" href="https://auditsaas.org/feedback" />
+<link rel="stylesheet" href="/styles.css" />
+<script src="/site.js"></script>
 </head>
 <body>
 
@@ -64,7 +59,7 @@
         <li><strong>Anything else:</strong> UX friction, confusing report wording, whatever got in your way.</li>
       </ul>
 
-      <div class="waitlist-panel" style="margin: 40px 0;">
+      <div class="waitlist-panel panel-spaced">
         <a class="btn btn-primary"
            href="mailto:hello@auditsaas.org?subject=AuditSaas%20feedback&body=Type%20(false%20positive%20%2F%20false%20negative%20%2F%20new%20rule%20%2F%20language%20request%20%2F%20other)%3A%0A%0ADetails%3A%0A%0ARule%20ID%20(if%20applicable)%3A%0A">
           Send feedback →
@@ -85,6 +80,7 @@
       <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       <a href="/faq">FAQ</a>
       <a href="/changelog">Changelog</a>
+      <a href="https://github.com/sagaragarwal94/audit-saas/releases" target="_blank" rel="noopener">Releases</a>
       <a href="/feedback">Feedback</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
@@ -94,12 +90,5 @@
   </div>
 </footer>
 
-<script>
-  document.getElementById("theme-toggle").addEventListener("click", function () {
-    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem("theme", next);
-  });
-</script>
 </body>
 </html>

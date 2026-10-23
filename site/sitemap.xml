@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://auditsaas.org/</loc></url>
-  <url><loc>https://auditsaas.org/rules</loc></url>
-  <url><loc>https://auditsaas.org/faq</loc></url>
-  <url><loc>https://auditsaas.org/changelog</loc></url>
-  <url><loc>https://auditsaas.org/feedback</loc></url>
-  <url><loc>https://auditsaas.org/privacy</loc></url>
-  <url><loc>https://auditsaas.org/terms</loc></url>
-  <url><loc>https://auditsaas.org/security</loc></url>
+  <url><loc>https://auditsaas.org/</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://auditsaas.org/rules</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://auditsaas.org/faq</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://auditsaas.org/changelog</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://auditsaas.org/feedback</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://auditsaas.org/privacy</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://auditsaas.org/terms</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://auditsaas.org/security</loc><lastmod>2026-10-23</lastmod></url>
 </urlset>

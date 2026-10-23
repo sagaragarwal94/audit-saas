@@ -16,14 +16,9 @@
 <meta name="twitter:description" content="What it checks, whether your code ever leaves your machine, and how to install it." />
 <meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
-<link rel="stylesheet" href="styles.css" />
-<script>
-  (function () {
-    var stored = localStorage.getItem("theme");
-    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    document.documentElement.dataset.theme = theme;
-  })();
-</script>
+<link rel="canonical" href="https://auditsaas.org/faq" />
+<link rel="stylesheet" href="/styles.css" />
+<script src="/site.js"></script>
 </head>
 <body>
 
@@ -93,6 +88,13 @@
       <div class="faq-item">
         <h3>I think a finding is wrong (false positive/negative) — what do I do?</h3>
         <p>Open an issue on <a href="https://github.com/sagaragarwal94/audit-saas/issues" target="_blank" rel="noopener">GitHub</a> or reach out at <a href="mailto:hello@auditsaas.org">hello@auditsaas.org</a> with the rule ID and a bit of context. False-positive reports directly shape what gets fixed next — see <a href="/feedback">Feedback &amp; feature requests</a>.</p>
+        <p>To silence a finding you've reviewed, add <code>// auditsaas-ignore RULE_ID -- reason</code> on that line or the line above, <code>auditsaas-ignore-file RULE_ID</code> for a whole file, or list paths and rule IDs in <code>.auditsaas.json</code> (<code>ignorePaths</code>, <code>ignoreRules</code>). Suppressed findings still appear in a table at the end of <code>audit-report.md</code>, so they don't vanish from review.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How do I run it in CI and fail the build?</h3>
+        <p>Run <code>npx auditsaas scan . --no-history --fail-on high</code>. It exits with code 1 when any finding is high or critical, and code 2 on invalid flags or config. Upload <code>audit-output/findings.sarif.json</code> with GitHub's <code>upload-sarif</code> action and findings appear in the Security tab with stable fingerprints. See the <a href="/#ci">GitHub Actions example</a>.</p>
+        <p>On an existing codebase, scan once to create a baseline, then run with <code>--baseline path/to/findings.json</code> so only <em>new</em> findings fail the build.</p>
       </div>
 
       <div class="faq-item">
@@ -102,7 +104,7 @@
 
       <div class="faq-item">
         <h3>What frameworks and stacks does it understand?</h3>
-        <p>Today: JavaScript and TypeScript, full depth. It auto-detects common SaaS stacks — Next.js/Remix/Express/Fastify, Clerk/NextAuth/Supabase Auth/Firebase Auth, Prisma/Drizzle/Supabase/Mongo/Postgres/MySQL, Stripe/Paddle/Lemon Squeezy, OpenAI/Anthropic/Gemini/LangChain/Vercel AI SDK, and Docker/Terraform infra — then only runs the relevant rules.</p>
+        <p>Today: JavaScript and TypeScript, full depth. It auto-detects common SaaS stacks — Next.js/Remix/Express/Fastify/Hono/SvelteKit/Nuxt/Astro (including <code>.vue</code>, <code>.svelte</code>, and <code>.astro</code> files), Clerk/NextAuth/Better Auth/Lucia/Supabase Auth/Firebase Auth, Prisma/Drizzle/Supabase/Mongo/Postgres/MySQL, Stripe/Paddle/Lemon Squeezy, OpenAI/Anthropic/Gemini/LangChain/Vercel AI SDK, and Docker/Terraform infra. Rules for parts of a stack you don't use just don't fire, and <code>--focus</code> narrows a scan to security, privacy, payments, or AI.</p>
         <p>Python, Java, Kotlin, Swift, Rust, Go, and native Android/iOS checks are on the roadmap, prioritized by community demand rather than shipped speculatively.</p>
       </div>
 
@@ -117,6 +119,7 @@
       <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       <a href="/faq">FAQ</a>
       <a href="/changelog">Changelog</a>
+      <a href="https://github.com/sagaragarwal94/audit-saas/releases" target="_blank" rel="noopener">Releases</a>
       <a href="/feedback">Feedback</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
@@ -126,12 +129,5 @@
   </div>
 </footer>
 
-<script>
-  document.getElementById("theme-toggle").addEventListener("click", function () {
-    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem("theme", next);
-  });
-</script>
 </body>
 </html>
