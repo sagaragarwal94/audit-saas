@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { buildAiReviewInput, redactSecrets, resolveAiReviewConfig, runAiReview } from "../src/ai-reviewer.js";
+import { hangingFetch } from "./helpers.js";
 
 const audit = {
   project: {
@@ -83,6 +84,43 @@ test("buildAiReviewInput redacts secret-like evidence and keeps compact scanner 
 
 test("redactSecrets removes common token shapes", () => {
   assert.equal(redactSecrets("token=abc123456789xyz"), "[REDACTED]");
+});
+
+test("redactSecrets strips credentials embedded in connection strings", () => {
+  assert.equal(redactSecrets("postgres://admin:hunter2@db/app"), "postgres://admin:[REDACTED]@db/app");
+});
+
+test("runAiReview retries without temperature when a model rejects it", async () => {
+  const outDir = path.join(os.tmpdir(), `auditsaas-ai-temp-${Date.now()}`);
+  const bodies = [];
+  const review = await runAiReview({
+    audit,
+    outDir,
+    env: { AUDITSAAS_LLM_API_KEY: "k", AUDITSAAS_LLM_MODEL: "reasoning-model" },
+    fetchImpl: async (_url, options) => {
+      const body = JSON.parse(options.body);
+      bodies.push(body);
+      if ("temperature" in body) {
+        return { ok: false, status: 400, json: async () => ({ error: { message: "Unsupported value: 'temperature' does not support 0.2" } }) };
+      }
+      return { ok: true, json: async () => ({ choices: [{ message: { content: "# Executive Summary\nok" } }] }) };
+    },
+  });
+  assert.equal(review.status, "completed");
+  assert.equal(bodies.length, 2);
+});
+
+test("runAiReview fails gracefully on timeout and still writes ai-review.md", async () => {
+  const outDir = path.join(os.tmpdir(), `auditsaas-ai-timeout-${Date.now()}`);
+  const review = await runAiReview({
+    audit,
+    outDir,
+    env: { AUDITSAAS_LLM_API_KEY: "k", AUDITSAAS_LLM_MODEL: "m", AUDITSAAS_LLM_TIMEOUT_MS: "20" },
+    fetchImpl: hangingFetch,
+  });
+  assert.equal(review.status, "failed");
+  assert.match(review.error, /timed out after 20ms/);
+  assert.match(await fs.readFile(path.join(outDir, "ai-review.md"), "utf8"), /Status: failed/);
 });
 
 test("runAiReview writes markdown and json from an OpenAI-compatible response", async () => {

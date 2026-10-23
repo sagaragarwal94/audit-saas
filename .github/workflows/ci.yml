@@ -18,18 +18,42 @@ jobs:
     name: Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        node-version: ["20.x", "22.x"]
+        # 20.x stays while package.json declares engines >=20.
+        node-version: ["20.x", "22.x", "24.x"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
       - run: npm test
       - name: Verify rules.html matches rules/*.md
-        if: matrix.node-version == '20.x'
+        if: matrix.node-version == '24.x'
         run: |
           node scripts/generate-rules-page.mjs
-          git diff --exit-code site/rules.html || (echo "::error::site/rules.html is out of sync with rules/*.md — run 'node scripts/generate-rules-page.mjs' and commit" && exit 1)
+          git diff --exit-code site/rules.html || (echo "::error::site/rules.html is out of sync with rules/*.md — run 'npm run build:rules-page' and commit" && exit 1)
+
+  self-scan:
+    name: Self-scan (dogfood)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.x"
+      # failOn comes from .auditsaas.json, so this step fails on any
+      # high/critical finding in the scanner's own code.
+      - name: Scan this repository with AuditSaas
+        run: node bin/saas-audit.js scan . --no-history --no-ai-review --out-dir audit-output
+      - name: Upload SARIF to code scanning
+        if: always() && github.event_name == 'push' && hashFiles('audit-output/findings.sarif.json') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: audit-output/findings.sarif.json
+          category: auditsaas

@@ -38,8 +38,12 @@ const SEVERITY_COLOR = {
 };
 
 export function severityLabel(severity, count) {
+  return severityColor(severity, `${count} ${severity}`);
+}
+
+export function severityColor(severity, text) {
   const paintFn = SEVERITY_COLOR[severity] || color.gray;
-  return paintFn(`${count} ${severity}`);
+  return paintFn(text);
 }
 
 export function formatDuration(ms) {

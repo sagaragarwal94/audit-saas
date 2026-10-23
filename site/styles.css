@@ -337,6 +337,10 @@ html[data-theme="light"] .theme-toggle .icon-dark { display: inline; }
   font-size: 0.98rem;
   font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
 }
+.rule-head h3 a { color: inherit; text-decoration: none; }
+.rule-head h3 a:hover { text-decoration: underline; }
+.rule { scroll-margin-top: 80px; }
+.rule:target { border-color: var(--accent); }
 .rule p { margin: 4px 0; color: var(--muted); font-size: 0.92rem; }
 .rule code {
   background: var(--inline-code-bg);

@@ -1,7 +1,10 @@
+// auditsaas-ignore-file -- detector patterns, not application code
 import path from "node:path";
 import { loadRuleCatalog } from "./rule-catalog.js";
+import { redactSecrets } from "./redact.js";
+import { isLockfile } from "./scanner.js";
 
-const FOCUS_MAP = {
+export const FOCUS_MAP = {
   security: [
     "auth", "authorization", "api", "database", "xss", "secrets", "headers", "logging",
     "cors", "ssrf", "jwt", "csrf", "dependencies", "uploads", "admin", "infra", "injection",
@@ -15,11 +18,22 @@ const FOCUS_MAP = {
 
 const RULE_CATALOG = loadRuleCatalog();
 
+// A detector that throws (e.g. a catastrophic regex on an odd file) is
+// reported in `errors` instead of aborting the whole scan.
 export function runRules(project, context) {
   const categories = FOCUS_MAP[context.focus] || null;
-  return rules
+  const errors = [];
+  const findings = rules
     .filter((rule) => !categories || categories.includes(rule.category))
-    .flatMap((rule) => rule.detect(project, context).map((finding) => normalizeFinding(rule, finding)));
+    .flatMap((rule) => {
+      try {
+        return rule.detect(project, context).map((finding) => normalizeFinding(rule, finding));
+      } catch (error) {
+        errors.push({ ruleId: rule.id, message: error instanceof Error ? error.message : String(error) });
+        return [];
+      }
+    });
+  return { findings, errors };
 }
 
 function normalizeFinding(rule, finding) {
@@ -40,12 +54,26 @@ function normalizeFinding(rule, finding) {
   };
 }
 
+const SOURCE_FILE_PATTERN = /\.(t|j)sx?$|\.[mc][jt]s$|\.(vue|svelte|astro)$/;
+
+// Minified bundles are build output, not reviewable source, and their huge
+// single lines are where regex backtracking costs explode.
 function sourceFiles(project) {
-  return project.files.filter((file) => !file.classification.includes("environment") && /\.(t|j)sx?$|\.mjs$|\.cjs$/.test(file.relativePath));
+  return project.files.filter((file) => !file.classification.includes("environment") && !file.minified && SOURCE_FILE_PATTERN.test(file.relativePath));
 }
 
 function isTestFile(relativePath) {
-  return /\.(test|spec)\.[jt]sx?$/i.test(relativePath) || /(^|[\\/])__tests__([\\/]|$)/i.test(relativePath);
+  return /\.(test|spec)\.[jt]sx?$/i.test(relativePath) || /(^|[\\/])(__tests__|__mocks__)([\\/]|$)/i.test(relativePath);
+}
+
+function isDocFile(file) {
+  return /\.(md|mdx)$/i.test(file.relativePath);
+}
+
+// Everything except prose docs: rules that scan config, HTML, or env files
+// as well as code shouldn't fire on a README that merely describes a risk.
+function nonDocFiles(project) {
+  return project.files.filter((file) => !isDocFile(file));
 }
 
 // Source files that represent real application behavior: excludes docs/config
@@ -63,26 +91,73 @@ function appFilesWith(project, label) {
   return appCodeFiles(project).filter((file) => file.classification.includes(label));
 }
 
+function matchIndex(content, pattern) {
+  if (typeof pattern === "string") return content.indexOf(pattern);
+  // search() ignores lastIndex, so global regexes are safe here too.
+  return content.search(pattern);
+}
+
 function lineOf(content, pattern) {
-  const idx = typeof pattern === "string" ? content.indexOf(pattern) : content.search(pattern);
+  const idx = matchIndex(content, pattern);
   if (idx < 0) return undefined;
   return content.slice(0, idx).split("\n").length;
 }
 
-function hasAny(content, patterns) {
-  return patterns.some((pattern) => pattern.test(content));
+// The actual source line that matched, trimmed and secret-redacted, so
+// reports show the user's code rather than the detector's regex. Lines from
+// .env files name the variable but never echo its value, whichever rule hit.
+function evidenceLine(file, line) {
+  if (!line) return undefined;
+  const text = file.content.split(/\r?\n/)[line - 1]?.trim() || "";
+  if (!text) return undefined;
+  if (file.classification.includes("environment")) {
+    const key = text.split("=")[0].replace(/^export\s+/, "").trim();
+    return key && key !== text ? `${key}=[REDACTED]` : "[REDACTED]";
+  }
+  const clipped = text.length > 160 ? `${text.slice(0, 157)}...` : text;
+  return redactSecrets(clipped);
 }
 
 function findingForFile(ruleData, file, pattern, extra = {}) {
+  const line = lineOf(file.content, pattern);
   return {
     ...ruleData,
     file: file.relativePath,
-    line: lineOf(file.content, pattern),
-    evidence: String(pattern)
-      .replaceAll("/", "")
-      .slice(0, 140),
+    line,
+    evidence: evidenceLine(file, line) || `Matched by file path: ${file.relativePath}`,
     ...extra
   };
+}
+
+// getUser()/getSession() count only as bare calls or on an auth client;
+// db.getUser(params.id) is a data lookup, not an auth check.
+const AUTH_CALL = /\bauth\(|getServerSession|currentUser|getAuth|requireAuth|withAuth|(?<![\w.])(getSession|getUser)\(|auth\.api\.getSession|\.auth\.getUser\(|validateRequest|verifyToken|jwtVerify|supabase\.auth|getKindeServerSession|session\.user/i;
+const LLM_CALL = /chat\.completions\.create|responses\.create|messages\.create|generateText|streamText|generateObject|streamObject|\.invoke\(|generateContent\(/;
+const MANAGED_AUTH_PROVIDERS = ["clerk", "supabase", "firebase", "authjs", "nextauth", "better_auth"];
+// Endpoints that are unauthenticated by design, recognized only as the first
+// segment under api/ (or app/ for route handlers), so api/orders/[id]/status
+// or api/admin/register still get checked.
+const AUTH_ENDPOINT_PATH = /(^|\/)(api|app)\/(auth|login|log-in|signin|sign-in|signup|sign-up|register|logout|forgot-password|reset-password|webhooks?|health|status)(\/|\.|$)|\[\.\.\.nextauth\]/i;
+
+// Server-side code: route handlers, Server Actions, and non-component
+// modules. Keeps "password"/"login" in a React form from reading as a
+// custom credential store.
+function isServerSide(file) {
+  return file.classification.includes("api_route") ||
+    /^\s*["']use server["']/m.test(file.content) ||
+    !/\.(tsx|jsx|vue|svelte|astro)$/.test(file.relativePath);
+}
+
+const CREDENTIAL_HANDLER = /export\s+(async\s+)?function\s+POST|export\s+const\s+POST\b|\b(router|app)\.post\(|\bauthorize\s*\(|^\s*["']use server["']|login|signin|signIn|credentials|forgot.?password|reset.?password/im;
+
+function handlesCredentials(file) {
+  return file.classification.includes("api_route") ||
+    /^\s*["']use server["']/m.test(file.content) ||
+    /\bauthorize\s*\(|CredentialsProvider|Credentials\(|router\.post\(|app\.post\(/.test(file.content);
+}
+
+function isPlaceholderSecret(value) {
+  return /(.)\1{7,}/.test(value) || /your|example|placeholder|dummy|fake|redacted|changeme/i.test(value);
 }
 
 export const rules = [
@@ -95,7 +170,7 @@ export const rules = [
     recommendation: "Use Argon2id or bcrypt with a suitable cost factor, never plaintext or raw SHA/MD5 hashes.",
     standards: ["OWASP ASVS V2 Authentication", "OWASP Top 10: A07 Identification and Authentication Failures"],
     detect(project) {
-      const authFiles = appFilesWith(project, "auth");
+      const authFiles = appFilesWith(project, "auth").filter(isServerSide);
       const findings = [];
       for (const file of authFiles) {
         if (/password/i.test(file.content) && /\b(md5|sha1|sha256|createHash)\b/i.test(file.content) && !/bcrypt|argon2/i.test(file.content)) {
@@ -104,7 +179,8 @@ export const rules = [
       }
       const customPasswordSeen = authFiles.some((file) => /password/i.test(file.content));
       const strongHashSeen = authFiles.some((file) => /bcrypt|argon2/i.test(file.content));
-      if (customPasswordSeen && !strongHashSeen) {
+      const managedAuth = project.providers.auth.some((provider) => MANAGED_AUTH_PROVIDERS.includes(provider));
+      if (customPasswordSeen && !strongHashSeen && !managedAuth && findings.length === 0) {
         findings.push({
           title: "Custom password handling found without strong hashing evidence",
           severity: "high",
@@ -127,9 +203,10 @@ export const rules = [
     standards: ["OWASP ASVS V2 Authentication"],
     detect(project) {
       return appFilesWith(project, "auth")
+        .filter(handlesCredentials)
         .filter((file) => /login|signin|signIn|credentials/i.test(file.relativePath + file.content))
         .filter((file) => !/rateLimit|limiter|upstash|slowDown|failedLogin|attempt/i.test(file.content))
-        .map((file) => findingForFile({}, file, /login|signin|signIn|credentials/i));
+        .map((file) => findingForFile({}, file, CREDENTIAL_HANDLER));
     }
   },
   {
@@ -156,10 +233,11 @@ export const rules = [
     recommendation: "Set HttpOnly, Secure, and SameSite=Lax or Strict for session cookies in production.",
     standards: ["OWASP ASVS V3 Session Management"],
     detect(project) {
-      return sourceFiles(project)
-        .filter((file) => /cookies?\(|setCookie|Set-Cookie/i.test(file.content))
+      const cookieWrite = /cookies\(\)\)?\.set\(|\.cookies\.set\(|\bres\.cookie\(|setCookie\(|['"]Set-Cookie['"]|cookie\.serialize\(/i;
+      return appCodeFiles(project)
+        .filter((file) => cookieWrite.test(file.content))
         .filter((file) => !/httpOnly/i.test(file.content) || !/secure/i.test(file.content) || !/sameSite/i.test(file.content))
-        .map((file) => findingForFile({}, file, /cookies?\(|setCookie|Set-Cookie/i));
+        .map((file) => findingForFile({}, file, cookieWrite));
     }
   },
   {
@@ -187,11 +265,15 @@ export const rules = [
     recommendation: "Require server-side authentication and authorization in every sensitive API route.",
     standards: ["OWASP Top 10: A01 Broken Access Control"],
     detect(project) {
-      return filesWith(project, "api_route")
+      // Many Next.js apps enforce auth once in middleware; keep reporting
+      // the route (middleware matchers are easy to get wrong) at low confidence.
+      const middlewareAuth = filesWith(project, "middleware").some((file) => AUTH_CALL.test(file.content) || /clerkMiddleware|authMiddleware|withAuth/.test(file.content));
+      return appFilesWith(project, "api_route")
         .filter((file) => !file.classification.includes("payment"))
-        .filter((file) => /export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)|router\.(get|post|put|patch|delete)/i.test(file.content))
-        .filter((file) => !/auth\(|getServerSession|currentUser|getAuth|requireAuth|session|jwtVerify|supabase\.auth/i.test(file.content))
-        .map((file) => findingForFile({}, file, /export\s+async\s+function|router\./i, { confidence: "medium" }));
+        .filter((file) => !AUTH_ENDPOINT_PATH.test(file.relativePath))
+        .filter((file) => /export\s+(async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE)|export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\b|router\.(get|post|put|patch|delete)/i.test(file.content))
+        .filter((file) => !AUTH_CALL.test(file.content) && !/\bsession\b/i.test(file.content))
+        .map((file) => findingForFile({}, file, /export\s+(async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE)|export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\b|router\./i, { confidence: middlewareAuth ? "low" : "medium" }));
     }
   },
   {
@@ -218,9 +300,15 @@ export const rules = [
     recommendation: "Use parameterized queries or ORM query builders. Never concatenate user-controlled data into SQL.",
     standards: ["OWASP Top 10: A03 Injection"],
     detect(project) {
-      return sourceFiles(project)
-        .filter((file) => /\$queryRawUnsafe|executeRawUnsafe|\.query\(\s*`|SELECT .* \$\{|WHERE .* \+/is.test(file.content))
-        .map((file) => findingForFile({}, file, /\$queryRawUnsafe|executeRawUnsafe|\.query\(\s*`|SELECT .* \$\{|WHERE .* \+/is, { confidence: "high" }));
+      // Interpolation inside a template passed as a call *argument*, or string
+      // concatenation onto SQL. Tagged templates (sql`...${id}`, $queryRaw`...`)
+      // are parameterized by the driver and deliberately not matched.
+      // Quantifiers are bounded so a long minified line can't trigger
+      // catastrophic backtracking.
+      const pattern = /\$(queryRawUnsafe|executeRawUnsafe)\(|\.(query|execute|raw|unsafe)\(\s*`[^`]{0,500}?\$\{|"[^"\n]{0,200}?\b(SELECT\s[^"\n]{1,200}?\sFROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM)\b[^"\n]{0,200}"\s*\+\s*[\w(]|'[^'\n]{0,200}?\b(SELECT\s[^'\n]{1,200}?\sFROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM)\b[^'\n]{0,200}'\s*\+\s*[\w(]/i;
+      return appCodeFiles(project)
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "high" }));
     }
   },
   {
@@ -232,7 +320,7 @@ export const rules = [
     recommendation: "Avoid raw HTML rendering. If required, sanitize with a proven HTML sanitizer and use a strict CSP.",
     standards: ["OWASP Top 10: A03 Injection"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /dangerouslySetInnerHTML|innerHTML\s*=|document\.write/i.test(file.content))
         .filter((file) => !/dompurify|sanitizeHtml|sanitize\(/i.test(file.content))
         .map((file) => findingForFile({}, file, /dangerouslySetInnerHTML|innerHTML\s*=|document\.write/i, { confidence: "high" }));
@@ -267,14 +355,24 @@ export const rules = [
         /sk_live_[A-Za-z0-9]{12,}/,
         /sk_test_[A-Za-z0-9]{12,}/,
         /sk-proj-[A-Za-z0-9_-]{20,}/,
+        /sk-ant-[A-Za-z0-9_-]{20,}/,
+        /gh[pousr]_[A-Za-z0-9]{36}/,
+        /xox[baprs]-[A-Za-z0-9-]{10,}/,
+        /-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,
         /OPENAI_API_KEY\s*=\s*['"][^'"]+['"]/,
         /STRIPE_SECRET_KEY\s*=\s*['"][^'"]+['"]/
       ];
-      return sourceFiles(project).flatMap((file) =>
-        secretPatterns
-          .filter((pattern) => pattern.test(file.content))
-          .map((pattern) => findingForFile({}, file, pattern, { evidence: "Secret-like value redacted", confidence: "high" }))
-      );
+      return nonDocFiles(project)
+        .filter((file) => !file.classification.includes("environment"))
+        .filter((file) => !isLockfile(file.relativePath))
+        .flatMap((file) =>
+          secretPatterns.flatMap((pattern) => {
+            const real = [...file.content.matchAll(new RegExp(pattern.source, `${pattern.flags}g`))]
+              .map((match) => match[0])
+              .find((value) => !isPlaceholderSecret(value));
+            return real ? [findingForFile({}, file, real, { evidence: "Secret-like value redacted", confidence: "high" })] : [];
+          })
+        );
     }
   },
   {
@@ -286,9 +384,19 @@ export const rules = [
     recommendation: "Never expose OpenAI, Stripe secret, Supabase service role, or private API keys to frontend code. Move calls server-side or behind an authenticated proxy.",
     standards: ["OWASP Top 10: A02 Cryptographic Failures"],
     detect(project) {
-      return project.files
-        .filter((file) => /NEXT_PUBLIC_.*(SECRET|PRIVATE|TOKEN|OPENAI|STRIPE_SECRET|SERVICE_ROLE|API_KEY)/i.test(file.content))
-        .map((file) => findingForFile({}, file, /NEXT_PUBLIC_.*(SECRET|PRIVATE|TOKEN|OPENAI|STRIPE_SECRET|SERVICE_ROLE|API_KEY)/i, { confidence: "high" }));
+      // Browser-exposed env prefixes across Next.js, Vite, Expo, CRA, Nuxt,
+      // and SvelteKit/Astro. Keys designed to be public (Stripe publishable,
+      // Supabase anon, Firebase web config, analytics/DSNs) are skipped.
+      const exposed = /\b(?:NEXT_PUBLIC|VITE|EXPO_PUBLIC|REACT_APP|NUXT_PUBLIC|PUBLIC)_[A-Z0-9_]*(?:SECRET|PRIVATE|SERVICE_ROLE|OPENAI|ANTHROPIC|STRIPE_SECRET|API_KEY|TOKEN)[A-Z0-9_]*\b/g;
+      const intendedPublic = /PUBLISHABLE|ANON|FIREBASE|MAPS|POSTHOG|SENTRY|MAPBOX|ALGOLIA_SEARCH|TURNSTILE|RECAPTCHA|SITE_KEY|MEASUREMENT/;
+      // ...unless the name itself says it's a secret (RECAPTCHA_SECRET_KEY,
+      // SENTRY_AUTH_TOKEN, FIREBASE_ADMIN_PRIVATE_KEY, POSTHOG_PERSONAL_API_KEY).
+      const secretShaped = /SECRET|PRIVATE|SERVICE_ROLE|AUTH_TOKEN|PERSONAL|ADMIN/;
+      const isExposedSecret = (name) => secretShaped.test(name) || !intendedPublic.test(name);
+      return nonDocFiles(project).filter((file) => !isTestFile(file.relativePath)).flatMap((file) => {
+        const name = [...file.content.matchAll(exposed)].map((match) => match[0]).find(isExposedSecret);
+        return name ? [findingForFile({}, file, name, { confidence: "high" })] : [];
+      });
     }
   },
   {
@@ -305,7 +413,7 @@ export const rules = [
         .filter((file) => file.classification.includes("api_route"))
         .filter((file) => /webhook/i.test(file.relativePath + file.content) && /stripe/i.test(file.content))
         .filter((file) => !/webhooks\.constructEvent|constructEventAsync/i.test(file.content))
-        .map((file) => findingForFile({}, file, /webhook/i, { confidence: "high" }));
+        .map((file) => findingForFile({}, file, /request\.json\(|req\.body|export\s+async\s+function\s+POST|webhook/i, { confidence: "high" }));
     }
   },
   {
@@ -320,7 +428,7 @@ export const rules = [
         .filter((file) => file.classification.includes("api_route"))
         .filter((file) => /webhook/i.test(file.relativePath + file.content))
         .filter((file) => !/event\.id|idempot|processed/i.test(file.content))
-        .map((file) => findingForFile({}, file, /webhook/i));
+        .map((file) => findingForFile({}, file, /event\.type|request\.json\(|req\.body|export\s+async\s+function\s+POST|webhook/i));
     }
   },
   {
@@ -334,9 +442,9 @@ export const rules = [
     detect(project) {
       return appCodeFiles(project)
         .filter((file) => file.classification.includes("ai"))
-        .filter((file) => /openai|generateText|streamText|chat\.completions|responses\.create/i.test(file.content))
-        .filter((file) => !/rateLimit|quota|maxTokens|max_tokens|usage|billing|plan|auth\(|session|getAuth/i.test(file.content))
-        .map((file) => findingForFile({}, file, /openai|generateText|streamText|chat\.completions|responses\.create/i, { confidence: "medium" }));
+        .filter((file) => LLM_CALL.test(file.content))
+        .filter((file) => !/rateLimit|quota|maxTokens|max_tokens|maxOutputTokens|max_output_tokens|usage|billing|plan|auth\(|session|getAuth/i.test(file.content))
+        .map((file) => findingForFile({}, file, LLM_CALL, { confidence: "medium" }));
     }
   },
   {
@@ -350,6 +458,7 @@ export const rules = [
     detect(project) {
       return appCodeFiles(project)
         .filter((file) => file.classification.includes("ai"))
+        .filter((file) => LLM_CALL.test(file.content))
         .filter((file) => /system|tools|function_call|retriev|vector|prompt/i.test(file.content))
         .map((file) => findingForFile({}, file, /system|tools|function_call|retriev|vector|prompt/i, { confidence: "low" }));
     }
@@ -376,7 +485,7 @@ export const rules = [
     standards: ["GDPR Article 17 Right to Erasure", "CCPA Right to Delete"],
     detect(project, context) {
       if (!context.dataInventory || context.dataInventory.length === 0) return [];
-      const hasDeletion = project.files.some((file) => /delete.?account|deleteUser|account.?deletion|gdpr.?delet|right.?to.?eras/i.test(file.relativePath + file.content));
+      const hasDeletion = nonDocFiles(project).some((file) => /delete.?account|deleteUser|account.?deletion|gdpr.?delet|right.?to.?eras/i.test(file.relativePath + file.content));
       return hasDeletion ? [] : [{ confidence: "low" }];
     }
   },
@@ -389,9 +498,9 @@ export const rules = [
     recommendation: "Gate non-essential tracking scripts behind a cookie consent banner and only load them after opt-in where required.",
     standards: ["GDPR", "ePrivacy Directive"],
     detect(project) {
-      const hasTracking = project.files.some((file) => /google-analytics|gtag\(|posthog\.init|mixpanel\.init|segment\.io|hotjar|fullstory|clarity\.ms/i.test(file.content));
+      const hasTracking = nonDocFiles(project).some((file) => /google-analytics|gtag\(|posthog\.init|mixpanel\.init|segment\.io|hotjar|fullstory|clarity\.ms/i.test(file.content));
       if (!hasTracking) return [];
-      const hasConsent = project.files.some((file) => /cookie.?consent|consent.?banner|cookieyes|onetrust|cookiebot/i.test(file.relativePath + file.content));
+      const hasConsent = nonDocFiles(project).some((file) => /cookie.?consent|consent.?banner|cookieyes|onetrust|cookiebot/i.test(file.relativePath + file.content));
       return hasConsent ? [] : [{ confidence: "low" }];
     }
   },
@@ -404,10 +513,12 @@ export const rules = [
     recommendation: "Redact secrets from logs and avoid logging full request bodies, authorization headers, cookies, payment payloads, and AI prompts unless explicitly scrubbed.",
     standards: ["OWASP Top 10: A09 Security Logging and Monitoring Failures"],
     detect(project) {
-      return sourceFiles(project)
-        .filter((file) => /console\.(log|error|warn)|logger\.(info|error|warn|debug)/i.test(file.content))
-        .filter((file) => /password|token|secret|authorization|cookie|request|req\.body|payload|prompt/i.test(file.content))
-        .map((file) => findingForFile({}, file, /console\.(log|error|warn)|logger\.(info|error|warn|debug)/i, { confidence: "medium" }));
+      // The sensitive value has to appear in the log call itself, not just
+      // somewhere in the same file.
+      const pattern = /(console\.(log|error|warn|info|debug)|logger\.(info|error|warn|debug))\([^\n]*\b(password|passwd|token|secret|authorization|cookie|req\.body|body|payload|prompt|event)\b/i;
+      return appCodeFiles(project)
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
     }
   },
   {
@@ -419,7 +530,7 @@ export const rules = [
     recommendation: "Add alerts for failed login spikes, repeated 401/403s, sequential ID access, AI spend spikes, webhook failures, admin access, and error-rate increases.",
     standards: ["OWASP Top 10: A09 Security Logging and Monitoring Failures"],
     detect(project) {
-      const hasMonitoring = project.providers.observability.length > 0 || project.files.some((file) => /Sentry|Datadog|Axiom|OpenTelemetry|Better Stack|Logtail|PostHog/i.test(file.content));
+      const hasMonitoring = project.providers.observability.length > 0 || nonDocFiles(project).some((file) => /Sentry|Datadog|Axiom|OpenTelemetry|Better Stack|Logtail|PostHog/i.test(file.content));
       return hasMonitoring ? [] : [{ confidence: "medium" }];
     }
   },
@@ -432,11 +543,13 @@ export const rules = [
     recommendation: "Enforce HTTPS and configure HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy.",
     standards: ["OWASP Top 10: A05 Security Misconfiguration"],
     detect(_project, context) {
-      if (!context.runtime) return [];
+      // An unreachable URL says nothing about its headers; the report shows
+      // the connection error instead of a misleading "everything missing".
+      if (!context.runtime?.reachable) return [];
       const missing = context.runtime.missingHeaders || [];
       const findings = [];
       if (!context.runtime.https) {
-        findings.push({ title: "Production URL is not using HTTPS", severity: "critical", evidence: context.runtime.url, confidence: "high" });
+        findings.push({ title: "Production URL is not using HTTPS", severity: "critical", evidence: context.runtime.finalUrl || context.runtime.url, confidence: "high" });
       }
       if (missing.length > 0) {
         findings.push({ evidence: `Missing headers: ${missing.join(", ")}`, confidence: "high" });
@@ -453,9 +566,14 @@ export const rules = [
     recommendation: "Use HTTPS for production URLs, OAuth callbacks, payment webhooks, and API integrations.",
     standards: ["OWASP Top 10: A02 Cryptographic Failures"],
     detect(project) {
-      return project.files
-        .filter((file) => /http:\/\/(?!localhost|127\.0\.0\.1)/i.test(file.content))
-        .map((file) => findingForFile({}, file, /http:\/\/(?!localhost|127\.0\.0\.1)/i));
+      // XML namespace URIs (SVG xmlns, schemas) are identifiers, not network
+      // calls; local/dev hosts and documentation domains are also skipped.
+      const pattern = /http:\/\/(?!(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|host\.docker\.internal|(?:www\.)?w3\.org|schemas\.|json-schema\.org|purl\.org|ns\.adobe\.com|(?:www\.)?example\.(?:com|org|net))\b)[^\s"'`<>)\\]+/i;
+      return nonDocFiles(project)
+        .filter((file) => !isTestFile(file.relativePath))
+        .filter((file) => !isLockfile(file.relativePath))
+        .filter((file) => pattern.test(file.content))
+        .map((file) => findingForFile({}, file, pattern));
     }
   },
   {
@@ -467,7 +585,7 @@ export const rules = [
     recommendation: "Use an explicit allowlist of trusted origins instead of `*` whenever credentials are allowed.",
     standards: ["OWASP Top 10: A05 Security Misconfiguration"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /Access-Control-Allow-Origin['"]?\s*[:,]\s*['"]\*/i.test(file.content))
         .filter((file) => /Access-Control-Allow-Credentials['"]?\s*[:,]\s*['"]?true/i.test(file.content) || /credentials\s*:\s*true/i.test(file.content))
         .map((file) => findingForFile({}, file, /Access-Control-Allow-Origin['"]?\s*[:,]\s*['"]\*/i, { confidence: "high" }));
@@ -482,7 +600,7 @@ export const rules = [
     recommendation: "Validate the incoming origin against an explicit allowlist before echoing it back in Access-Control-Allow-Origin.",
     standards: ["OWASP Top 10: A05 Security Misconfiguration"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /Access-Control-Allow-Origin['"]?\s*[:,]\s*(req(uest)?\.headers\.(get\()?['"]?origin|origin\))/i.test(file.content))
         .filter((file) => !/allowlist|allowedOrigins|whitelist/i.test(file.content))
         .map((file) => findingForFile({}, file, /Access-Control-Allow-Origin['"]?\s*[:,]\s*(req(uest)?\.headers\.(get\()?['"]?origin|origin\))/i, { confidence: "medium" }));
@@ -513,7 +631,7 @@ export const rules = [
     codeExample: "jwt.verify(token, secret, { algorithms: [\"HS256\"] });",
     standards: ["OWASP ASVS V3 Session Management", "OWASP Top 10: A02 Cryptographic Failures"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /jwt\.verify\(/i.test(file.content))
         .filter((file) => !/algorithms\s*:/i.test(file.content))
         .map((file) => findingForFile({}, file, /jwt\.verify\(/i, { confidence: "high" }));
@@ -529,7 +647,7 @@ export const rules = [
     standards: ["OWASP ASVS V3 Session Management"],
     detect(project) {
       const pattern = /jwt\.(sign|verify)\([^)]*,\s*['"][^'"]{1,64}['"]/i;
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => pattern.test(file.content))
         .map((file) => findingForFile({}, file, pattern, { evidence: "Secret-like literal redacted", confidence: "medium" }));
     }
@@ -543,9 +661,9 @@ export const rules = [
     recommendation: "Use SameSite=Lax/Strict cookies together with a CSRF token, or a framework's built-in CSRF middleware, for state-changing routes.",
     standards: ["OWASP Top 10: A01 Broken Access Control", "OWASP ASVS V4 Access Control"],
     detect(project) {
-      const usesCookieSession = project.files.some((file) => /express-session|cookie-session|session\(\s*{/i.test(file.content));
+      const usesCookieSession = appCodeFiles(project).some((file) => /express-session|cookie-session|session\(\s*{/i.test(file.content));
       if (!usesCookieSession) return [];
-      const hasCsrf = project.files.some((file) => /csurf|csrf|sameSite\s*:\s*['"]strict['"]/i.test(file.content));
+      const hasCsrf = nonDocFiles(project).some((file) => /csurf|csrf|sameSite\s*:\s*['"]strict['"]/i.test(file.content));
       return hasCsrf ? [] : [{ confidence: "low" }];
     }
   },
@@ -559,9 +677,7 @@ export const rules = [
     standards: ["OWASP Top 10: A06 Vulnerable and Outdated Components"],
     detect(project) {
       if (!project.packageJson) return [];
-      const hasLockfile = project.files.some((file) =>
-        /^(package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$/.test(file.relativePath)
-      );
+      const hasLockfile = project.allPaths.some((file) => !file.includes("/") && isLockfile(file));
       return hasLockfile ? [] : [{ confidence: "medium" }];
     }
   },
@@ -605,7 +721,7 @@ export const rules = [
     recommendation: "Validate MIME type and extension against an allowlist, enforce a maximum file size, and store uploads outside the web root or in object storage with restricted execution.",
     standards: ["OWASP Top 10: A04 Insecure Design", "OWASP ASVS V12 File and Resources"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /multer\(|formidable\(|busboy|new\s+Formidable/i.test(file.content))
         .filter((file) => !/fileFilter|mimetype|allowedTypes|maxFileSize|limits\s*:/i.test(file.content))
         .map((file) => findingForFile({}, file, /multer\(|formidable\(|busboy|new\s+Formidable/i, { confidence: "medium" }));
@@ -621,7 +737,7 @@ export const rules = [
     standards: ["OWASP Top 10: A01 Broken Access Control", "OWASP ASVS V12 File and Resources"],
     detect(project) {
       const pattern = /(writeFile|createWriteStream)\([^)]*\.(originalname|originalFilename|filename)\b/i;
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => pattern.test(file.content))
         .filter((file) => !/path\.basename|sanitize-filename|randomUUID|crypto\.random/i.test(file.content))
         .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
@@ -653,7 +769,7 @@ export const rules = [
     detect(project) {
       return filesWith(project, "api_route")
         .filter((file) => /\/(debug|internal|__test|test-only)\//i.test(file.relativePath))
-        .filter((file) => !/auth\(|getServerSession|currentUser|getAuth|requireAuth|process\.env\.NODE_ENV\s*!==\s*['"]production['"]/i.test(file.content))
+        .filter((file) => !AUTH_CALL.test(file.content) && !/process\.env\.NODE_ENV\s*!==\s*['"]production['"]/i.test(file.content))
         .map((file) => findingForFile({}, file, /\/(debug|internal|__test|test-only)\//i, { confidence: "medium" }));
     }
   },
@@ -683,7 +799,7 @@ export const rules = [
     detect(project) {
       const pattern = /["']?(0\.0\.0\.0:)?\d{1,5}:(5432|3306|27017|6379|9200|5984)["']?/;
       return project.files
-        .filter((file) => /docker-compose/i.test(file.relativePath))
+        .filter((file) => /docker-compose|(^|\/)compose\.ya?ml$/i.test(file.relativePath))
         .filter((file) => pattern.test(file.content))
         .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
     }
@@ -698,7 +814,7 @@ export const rules = [
     standards: ["OWASP Top 10: A01 Broken Access Control"],
     detect(project) {
       if (!project.providers.database.includes("supabase")) return [];
-      const hasRls = project.files.some((file) => /row level security|enable row level security|create policy/i.test(file.content));
+      const hasRls = nonDocFiles(project).some((file) => /row level security|enable row level security|create policy/i.test(file.content));
       return hasRls ? [] : [{ confidence: "low" }];
     }
   },
@@ -743,9 +859,10 @@ export const rules = [
     standards: ["OWASP ASVS V2 Authentication"],
     detect(project) {
       return appFilesWith(project, "auth")
+        .filter(handlesCredentials)
         .filter((file) => /forgot.?password|reset.?password|password.?reset/i.test(file.relativePath + file.content))
         .filter((file) => !/rateLimit|limiter|upstash|slowDown|attempt/i.test(file.content))
-        .map((file) => findingForFile({}, file, /forgot.?password|reset.?password|password.?reset/i, { confidence: "medium" }));
+        .map((file) => findingForFile({}, file, CREDENTIAL_HANDLER, { confidence: "medium" }));
     }
   },
   {
@@ -759,7 +876,7 @@ export const rules = [
     standards: ["OWASP ASVS V3 Session Management"],
     detect(project) {
       const pattern = /jwt\.sign\([^)]*\)/s;
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /jwt\.sign\(/i.test(file.content))
         .filter((file) => !/expiresIn/i.test(file.content))
         .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
@@ -776,7 +893,7 @@ export const rules = [
     standards: ["OWASP Top 10: A02 Cryptographic Failures"],
     detect(project) {
       const pattern = /(token|secret|apiKey|sessionId|resetCode|otp)\s*[:=][^;]*Math\.random\(\)/i;
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => pattern.test(file.content))
         .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
     }
@@ -790,11 +907,11 @@ export const rules = [
     recommendation: "Generate a random state value per request, store it server-side or in a signed cookie, and verify it on callback before exchanging the authorization code.",
     standards: ["OWASP Top 10: A01 Broken Access Control"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /\/authorize\?|oauth2?\/authorize|response_type=code/i.test(file.content))
         .filter((file) => /client_id/i.test(file.content))
         .filter((file) => !/[?&]state=|state:\s*[a-zA-Z]/i.test(file.content))
-        .map((file) => findingForFile({}, file, /\/authorize\?|oauth2?\/authorize/i, { confidence: "low" }));
+        .map((file) => findingForFile({}, file, /\/authorize\?|oauth2?\/authorize|response_type=code/i, { confidence: "low" }));
     }
   },
   {
@@ -807,7 +924,7 @@ export const rules = [
     standards: ["OWASP Top 10: A01 Broken Access Control"],
     detect(project) {
       const pattern = /io\.on\(\s*['"]connection['"]|new WebSocket\.Server|wss\.on\(\s*['"]connection['"]/i;
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => pattern.test(file.content))
         .filter((file) => !/auth|token|verify|jwt|session/i.test(file.content))
         .map((file) => findingForFile({}, file, pattern, { confidence: "medium" }));
@@ -823,13 +940,15 @@ export const rules = [
     standards: ["OWASP Top 10: A08 Software and Data Integrity Failures"],
     detect(project) {
       const pattern = /<script[^>]+src=["']https?:\/\/[^"']+["'][^>]*>/gi;
+      // These vendors serve evergreen scripts and document that SRI will
+      // break them; flagging them would only teach users to ignore the rule.
+      const evergreen = /js\.stripe\.com|googletagmanager\.com|google-analytics\.com|google\.com\/recaptcha|challenges\.cloudflare\.com|js\.hcaptcha\.com|maps\.googleapis\.com|accounts\.google\.com\/gsi|apis\.google\.com/i;
       return project.files
-        .filter((file) => file.ext === ".html")
-        .filter((file) => {
-          const matches = file.content.match(pattern) || [];
-          return matches.some((tag) => !/integrity=/i.test(tag));
-        })
-        .map((file) => findingForFile({}, file, /<script[^>]+src=["']https?:\/\//i, { confidence: "medium" }));
+        .filter((file) => file.ext === ".html" || file.ext === ".htm")
+        .flatMap((file) => {
+          const tag = (file.content.match(pattern) || []).find((match) => !/integrity=/i.test(match) && !evergreen.test(match));
+          return tag ? [findingForFile({}, file, tag, { confidence: "medium" })] : [];
+        });
     }
   },
   {
@@ -841,7 +960,7 @@ export const rules = [
     recommendation: "Mount API docs routes only when NODE_ENV !== \"production\", or put them behind authentication.",
     standards: ["OWASP Top 10: A05 Security Misconfiguration"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /swagger-ui-express|swaggerUi\.serve/i.test(file.content))
         .filter((file) => !/NODE_ENV\s*!==?\s*['"]production['"]|isProduction/i.test(file.content))
         .map((file) => findingForFile({}, file, /swagger-ui-express|swaggerUi\.serve/i, { confidence: "medium" }));
@@ -885,7 +1004,7 @@ export const rules = [
     recommendation: "Remove the credential, rotate it immediately in the cloud provider console, and use environment variables or a secrets manager instead.",
     standards: ["OWASP Top 10: A05 Security Misconfiguration"],
     detect(project) {
-      const pattern = /\bAKIA[0-9A-Z]{16}\b/;
+      const pattern = /\b(?:AKIA|ASIA)(?!IOSFODNN7EXAMPLE)[0-9A-Z]{16}\b/;
       return project.files
         .filter((file) => pattern.test(file.content))
         .map((file) => findingForFile({}, file, pattern, { evidence: "Cloud credential redacted", confidence: "high" }));
@@ -900,10 +1019,11 @@ export const rules = [
     recommendation: "Remove backup/dump files from version control and store backups outside the repository with proper access controls.",
     standards: ["OWASP Top 10: A05 Security Misconfiguration"],
     detect(project) {
-      return project.files
-        .filter((file) => /\.(bak|backup|old)$/i.test(file.relativePath) || /dump\.sql$|backup.*\.sql$/i.test(file.relativePath))
-        .filter((file) => !/migrations?\//i.test(file.relativePath))
-        .map((file) => findingForFile({}, file, /\.(bak|backup|old|sql)$/i, { confidence: "medium" }));
+      return project.allPaths
+        .filter((file) => /\.(bak|backup|old|dump)$/i.test(file) || /(^|\/)[^/]*(dump|backup)[^/]*\.sql(\.gz)?$/i.test(file) || /\.sql\.gz$/i.test(file))
+        .filter((file) => !/migrations?\//i.test(file))
+        .filter((file) => !project.isGitIgnored?.(file))
+        .map((file) => ({ file, evidence: `Backup/dump file: ${file}`, confidence: "medium" }));
     }
   },
   {
@@ -948,7 +1068,8 @@ export const rules = [
     standards: ["OWASP Top 10: A05 Security Misconfiguration"],
     detect(project) {
       const pattern = /Content-Security-Policy[^;'"]*['"]?[^;]*unsafe-(inline|eval)/i;
-      return project.files
+      return nonDocFiles(project)
+        .filter((file) => !isTestFile(file.relativePath))
         .filter((file) => pattern.test(file.content))
         .map((file) => findingForFile({}, file, pattern, { confidence: "high" }));
     }
@@ -1009,7 +1130,7 @@ export const rules = [
     recommendation: "Add a depth-limiting or cost-analysis library (e.g. graphql-depth-limit, graphql-cost-analysis) to the server's validation rules.",
     standards: ["OWASP API Security: Unrestricted Resource Consumption"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /ApolloServer|graphqlHTTP|createYoga/i.test(file.content))
         .filter((file) => !/depthLimit|graphql-depth-limit|costAnalysis|graphql-cost-analysis/i.test(file.content))
         .map((file) => findingForFile({}, file, /ApolloServer|graphqlHTTP|createYoga/i, { confidence: "low" }));
@@ -1024,10 +1145,10 @@ export const rules = [
     recommendation: "Verify the session/user at the top of every Server Action that reads or writes sensitive data, exactly as you would in an API route.",
     standards: ["OWASP Top 10: A01 Broken Access Control"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /^\s*["']use server["'];?\s*$/m.test(file.content))
         .filter((file) => /\bexport\s+(async\s+)?function\b/.test(file.content))
-        .filter((file) => !/auth\(|getServerSession|currentUser|getAuth|requireAuth|session\.user/i.test(file.content))
+        .filter((file) => !AUTH_CALL.test(file.content))
         .map((file) => findingForFile({}, file, /["']use server["']/, { confidence: "medium" }));
     }
   },
@@ -1087,7 +1208,7 @@ export const rules = [
     recommendation: "Disable introspection (and the GraphiQL/Playground UI) outside of development environments.",
     standards: ["OWASP API Security: Security Misconfiguration"],
     detect(project) {
-      return sourceFiles(project)
+      return appCodeFiles(project)
         .filter((file) => /ApolloServer|graphqlHTTP|createYoga/i.test(file.content))
         .filter((file) => !/introspection:\s*(false|process\.env)|NODE_ENV\s*!==?\s*['"]production['"]/i.test(file.content))
         .map((file) => findingForFile({}, file, /ApolloServer|graphqlHTTP|createYoga/i, { confidence: "low" }));

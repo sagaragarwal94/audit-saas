@@ -1,42 +1,41 @@
 ---
 name: audit-saas-review
-description: Manually reviews the current codebase against AuditSaas's security/privacy/payments/AI rule catalog using human judgment, without running the saas-audit CLI's regex detectors. Use when someone wants a fast, install-free second opinion on their SaaS app's security/privacy/production-readiness, or wants to try AuditSaas's rule taxonomy before installing the CLI.
+description: Judgment-based security, privacy, payments, and AI-abuse review of a SaaS codebase against AuditSaas's rule catalog (rules/*.md) — reads the real code and traces auth, data access, webhooks, and LLM calls instead of running regex detectors. Use this whenever someone asks for a security review, pre-launch or production-readiness check, "is my app safe to ship", a privacy/GDPR data review, or a check for IDOR, leaked API keys, missing auth, unverified Stripe webhooks, or unbounded OpenAI/AI spend in a Next.js/Node/React/Vue SaaS — even if they never mention AuditSaas. Also use it to sanity-check or triage findings from a `saas-audit scan` report. Not for reviewing a single PR diff for general correctness bugs.
+argument-hint: "[security|privacy|payments|ai|all] [path]"
+allowed-tools: Read, Grep, Glob
 ---
 
 # AuditSaas Manual Review
 
-You are doing a **manual, judgment-based** code review against the AuditSaas
-rule catalog. This is deliberately different from the `saas-audit` CLI: the
-CLI runs fixed regex detectors and is deterministic; you read real code and
-use judgment, so you will catch things regex can't (and can also be wrong in
-ways regex isn't — say so when you're not sure).
+You're doing a **judgment-based** review against the AuditSaas rule catalog.
+The `saas-audit` CLI already covers the deterministic, regex-shaped pass; your
+value is everything regex can't do — following an ID from the route to the
+query to see whether it's actually scoped, noticing that auth lives in
+middleware, recognizing a sanitizer two calls away. That same judgment can be
+wrong in ways regex isn't, so say how sure you are.
 
-## Step 0 — Locate the rule catalog
+## 1. Find the rule catalog
 
-Never invent rule content. Find the real `rules/*.md` files, in this order,
-and stop at the first one that has `.md` files matching `auth.md`, `xss.md`,
-`secrets.md`, etc.:
+Rule IDs, severities, and recommendations must come from the real catalog,
+because people compare your report against CLI output and the public rules
+page. Look in this order and use the first that has category files
+(`auth.md`, `secrets.md`, ...):
 
-1. `./rules/` relative to the current working directory (you're inside a
-   clone of the auditsaas repo, or someone copied `rules/` into their project).
-2. `./node_modules/auditsaas/rules/` relative to the current working directory
-   (auditsaas installed as a project dependency).
-3. Walk up from this skill file's own directory: this file lives at
-   `.claude/skills/audit-saas-review/SKILL.md`, so `../../../rules/` (three
-   levels up) is the auditsaas repo root's `rules/` folder when this skill
-   is used from inside a real auditsaas checkout.
-4. If none of these resolve, tell the user plainly that the bundled rule
-   catalog could not be found, ask them for its path, and if they don't have
-   one, say so explicitly in your final report rather than fabricating rule
-   IDs or severities from memory.
+1. `./rules/` in the current project (an AuditSaas checkout, or copied in).
+2. `./node_modules/auditsaas/rules/` (installed as a dependency).
+3. `../../../rules/` relative to this SKILL.md (the skill ships at
+   `.claude/skills/audit-saas-review/` inside the AuditSaas package).
 
-Skip `rules/README.md` — it's documentation, not a rule file.
+`rules/README.md` is the contribution guide, not a category — skip it. If
+none of these exist, say so up front and ask for the path. Don't
+reconstruct rules from memory; a plausible-looking invented rule ID is worse
+than none.
 
-## Step 1 — Scope the review
+## 2. Scope
 
-If the user gave you a focus argument (`security`, `privacy`, `payments`,
-`ai`, or `all`), use it. Otherwise default to `all`. Map focus to categories
-exactly like the CLI does:
+Parse the arguments: a focus (`security`, `privacy`, `payments`, `ai`, `all`;
+default `all`) and optionally a subdirectory to review. Focus maps to
+categories exactly as the CLI does, so results stay comparable:
 
 - `security`: auth, authorization, api, database, xss, secrets, headers,
   logging, cors, ssrf, jwt, csrf, dependencies, uploads, admin, infra,
@@ -44,55 +43,110 @@ exactly like the CLI does:
 - `privacy`: privacy, secrets, logging, api
 - `payments`: payments, auth, authorization, api, logging
 - `ai`: ai, api, secrets, privacy, logging
-- `all`: every category (every file in `rules/`)
+- `all`: every category file
 
-Each category maps 1:1 to a filename (`rules/auth.md` = category `auth`).
-Before reading every file, do one quick pass over the project (package.json
-dependencies, a few grep passes for `stripe`, `openai`, `jsonwebtoken`,
-`prisma`/`supabase`, etc.) so you can skip categories with clearly zero
-relevant surface (e.g. don't spend the user's time on `payments.md` if there
-is no payments code at all) — but when in doubt, check it anyway.
+A rule's category is its `**Category:**` field (e.g. `AUTHZ_IDOR_POSSIBLE` is
+`authorization` but lives in `api.md`), so filter on that field, not the
+filename.
 
-## Step 2 — Review, one rule at a time
+Before reading rules, map the app in a few minutes: `package.json`
+dependencies, the framework's routing layout (`app/api/**/route.ts`,
+`pages/api`, Express routers, Server Actions with `"use server"`),
+middleware, and where the DB, payment, and LLM clients are created. Skip
+categories with no surface at all (no payments code → skip payments rules),
+and say which ones you skipped so the user knows what wasn't checked.
 
-For each in-scope `rules/<category>.md` file: read it, and for each `## RULE_ID`
-block, treat its `**Risk:**` and `**Recommendation:**` text as the standard
-you're checking against. Then actually look at the relevant source files —
-don't guess. Only report a finding if you found real, specific evidence:
-quote the file path, line/snippet, and explain in one sentence why it matches
-the rule's risk. If a rule doesn't apply (no matching code exists at all),
-skip it silently — don't pad the report with "N/A" entries.
+**Respect the project's suppressions**, the same way the CLI does:
 
-Do not paste raw secret values, API keys, or credentials you find into your
-report — describe the location and pattern only (e.g. "hardcoded key-shaped
-string in `config/stripe.ts:14`"), never the literal value.
+- `.auditsaas.json` at the project root: don't review `ignorePaths`; don't
+  report rules in `ignoreRules`.
+- `// auditsaas-ignore RULE_ID -- reason` on a line or the line above it, and
+  `auditsaas-ignore-file RULE_ID` anywhere in a file. No rule IDs means
+  every rule.
 
-## Step 3 — Report
+The team has already decided on those. If a suppression looks clearly wrong
+(e.g. the reason says "sanitized" but nothing sanitizes), mention it once in
+a short "Suppressions worth revisiting" note rather than as a finding.
 
-For each finding, use this shape (mirrors the rule catalog fields so it's
-easy to compare against a real `saas-audit scan` run):
+## 3. Review rule by rule
+
+For each in-scope rule, treat `**Risk:**` and `**Recommendation:**` as the
+standard. Find candidate code with Grep/Glob, then **read enough surrounding
+code to decide**: open the handler, follow the helper it calls, and check
+middleware and layouts that wrap it. Most false positives in this domain
+come from looking at one file in isolation, for example:
+
+- "Missing auth" on a route that `middleware.ts` protects (check its
+  `matcher` actually covers the path).
+- "IDOR" where the query is scoped by `userId`/`orgId` inside a repository
+  helper.
+- "Unbounded AI" where rate limiting or quotas wrap the handler.
+- "Webhook signature missing" where verification happens in a shared util.
+- Test fixtures, seed scripts, examples, and docs. They aren't production
+  paths, so report them only if they leak a real secret.
+
+The opposite also matters: when the evidence is genuinely there, report it
+even if it only partly fits the rule's wording. Silence on a real IDOR is the
+worst outcome.
+
+Never paste secret values (keys, tokens, passwords, connection-string
+credentials) into your report — the report gets shared. Name the variable and
+location instead: "Stripe live key literal in `lib/stripe.ts:14`".
+
+## 4. Verify before you report
+
+Do one deliberate pass over your draft findings and try to knock each one
+down: re-open the file, look for the mitigation you'd expect, and check
+callers. Drop it if you find the mitigation; downgrade the confidence if
+you're unsure. This pass is the difference between a review people act on
+and one they skim.
+
+Confidence means:
+- **high** — you traced the path and the mitigation is absent.
+- **medium** — the pattern is clearly present, but a mitigation could live
+  somewhere you couldn't see (infra, a gateway, another service).
+- **low** — a smell worth a human look.
+
+Use the catalog severity by default. Adjust only with a stated reason (e.g.
+"critical → medium: endpoint only returns public data").
+
+## 5. Report
+
+Start with a summary table, then findings ordered by severity:
+
+```
+| Severity | Rule | Location | Confidence |
+|---|---|---|---|
+| critical | AUTHZ_IDOR_POSSIBLE | app/api/projects/[id]/route.ts:4 | high |
+```
+
+Then for each finding:
 
 ```
 ### [SEVERITY] RULE_ID — Title
-File: path/to/file.ts:42
-Evidence: <short quote or paraphrase of the actual code>
-Risk: <from the rule catalog>
-Recommendation: <from the rule catalog, adapted to what you saw>
-Confidence: <your honest confidence — this is judgment, not regex>
+Location: path/to/file.ts:42
+Evidence: <the relevant code, quoted briefly, secrets redacted>
+Why it matches: <one or two sentences tracing the actual path>
+Fix: <the catalog recommendation, made concrete for this code>
+Confidence: high | medium | low
 ```
 
-End with:
-- A one-paragraph executive summary (worst 2-3 issues, plain language).
-- A note that this was a manual, non-exhaustive review complementary to the
-  `saas-audit` CLI, and that running `npx github:sagaragarwal94/audit-saas
-  scan .` gives a deterministic, repeatable, CI-friendly version of the same
-  rule catalog — this review is a preview, not a replacement.
+Close with:
+
+- **Executive summary** — one short paragraph: the 2–3 issues to fix before
+  launch, in plain language.
+- **Coverage** — categories reviewed, categories skipped (and why), and paths
+  excluded by suppressions.
+- **Next step** — that this was a manual, non-exhaustive review, and that
+  `npx auditsaas scan . --fail-on high` gives the deterministic, repeatable
+  version of the same catalog, with SARIF output for CI. The two are
+  complementary.
 
 ## Guardrails
 
-- Never invoke or shell out to the `saas-audit` CLI, `src/rules.js`, or any
-  regex detector — this skill's entire value is the judgment-based pass.
-- Never invent a rule ID that isn't literally present in the files you read
-  in Step 0.
-- This is a read-only review: don't edit the user's files unless they
-  explicitly ask you to fix something after seeing the report.
+- This skill is read-only. Don't edit files unless the user asks for fixes
+  after seeing the report.
+- Don't run the `saas-audit` CLI or `src/rules.js` detectors as a substitute
+  for reading code — the point is an independent, judgment-based read. If
+  the user hands you a CLI report, triage it: confirm, refute, or add.
+- Every rule ID you cite must appear in the catalog files you read in step 1.
