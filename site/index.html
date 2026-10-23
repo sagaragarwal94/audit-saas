@@ -16,14 +16,25 @@
 <meta name="twitter:description" content="Open source. A local CLI that audits SaaS apps for security, privacy, AI, payments, and production-readiness gaps." />
 <meta name="twitter:image" content="https://auditsaas.org/og-image.png" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
-<link rel="stylesheet" href="styles.css" />
-<script>
-  (function () {
-    var stored = localStorage.getItem("theme");
-    var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    document.documentElement.dataset.theme = theme;
-  })();
+<link rel="canonical" href="https://auditsaas.org/" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "AuditSaas",
+  "softwareVersion": "0.2.0",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Windows (Node.js 20+)",
+  "description": "Local CLI that audits SaaS codebases for security, privacy, AI-abuse, payments, and production-readiness gaps.",
+  "url": "https://auditsaas.org/",
+  "downloadUrl": "https://www.npmjs.com/package/auditsaas",
+  "sameAs": ["https://github.com/sagaragarwal94/audit-saas", "https://www.npmjs.com/package/auditsaas"],
+  "license": "https://github.com/sagaragarwal94/audit-saas/blob/main/LICENSE",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
 </script>
+<link rel="stylesheet" href="/styles.css" />
+<script src="/site.js"></script>
 </head>
 <body>
 
@@ -33,6 +44,7 @@
     <div class="nav-right">
       <nav class="nav-links">
         <a href="#features">Features</a>
+        <a href="#ci">CI</a>
         <a href="/rules">Rules</a>
         <a href="/faq">FAQ</a>
         <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
@@ -47,6 +59,7 @@
 <main>
   <section class="hero">
     <div class="wrap">
+      <a class="release-pill" href="/changelog"><span>New in v0.2.0</span> CI gating, suppressions, baselines, and far fewer false positives →</a>
       <p class="eyebrow">Open source · Runs 100% locally</p>
       <h1>Vibe-coded your SaaS? <br />Audit it before your users find the gaps.</h1>
       <p class="sub">
@@ -60,13 +73,24 @@
       </div>
       <div class="code-block hero-code">
         <div class="code-head"><span></span><span></span><span></span></div>
-        <pre><code>$ saas-audit scan .
+        <pre><code>$ npx auditsaas scan . --fail-on high
 
-  ✔ scanned 214 files in 1.8s
-  ✖ 3 critical   ✖ 7 high   ⚠ 12 medium
+AuditSaas scan complete
+8 files scanned in 21ms
 
-  Reports written to ./audit-output/
-    audit-report.md · findings.json · priority-action-plan.md</code></pre>
+23 findings: <span class="t-crit">6 critical</span>  <span class="t-high">7 high</span>  <span class="t-med">10 medium</span>
+
+Top findings
+  <span class="t-crit">CRITICAL</span> Possible IDOR: record fetched by ID without ownership scope
+           app/api/projects/[id]/route.ts:4  AUTHZ_IDOR_POSSIBLE
+  <span class="t-crit">CRITICAL</span> Stripe webhook may not verify event signatures
+           app/api/stripe/webhook/route.ts:5  PAYMENT_STRIPE_WEBHOOK_SIGNATURE_MISSING
+  <span class="t-high">HIGH</span>     Logs may include secrets or sensitive request data
+           app/api/ai/route.ts:11  LOGGING_SECRETS_RISK
+  ...
+
+<span class="t-crit">13 finding(s) at or above "high" severity (--fail-on high).</span></code></pre>
+        <p class="code-caption">Real output from the repo's intentionally vulnerable <a href="https://github.com/sagaragarwal94/audit-saas/tree/main/test/fixtures/vulnerable-app" target="_blank" rel="noopener">test app</a>.</p>
       </div>
     </div>
   </section>
@@ -122,8 +146,8 @@
           <p>Public Terraform S3 buckets and open security groups, weak token randomness, missing JWT expiry, OAuth CSRF, and unauthenticated WebSocket handlers.</p>
         </div>
         <div class="card">
-          <h3>Try it without installing</h3>
-          <p>A Claude Code Skill (<code>/audit-saas-review</code>) ships in the repo — it reads the same rule catalog and reviews your code with judgment, no CLI install required.</p>
+          <h3>Judgment-based review in Claude Code</h3>
+          <p>The <code>/audit-saas-review</code> skill ships with the package. It reviews your code against the same rule catalog, traces auth and data paths across files, and double-checks each finding before reporting it.</p>
         </div>
       </div>
     </div>
@@ -135,8 +159,8 @@
         <h2>Today, and where it's headed</h2>
         <p class="section-sub">AuditSaas is built stack-first, not language-first — full depth on the JavaScript/TypeScript SaaS stack today, with broader language and platform coverage planned as community feedback prioritizes it.</p>
         <ul class="checklist">
-          <li>JavaScript &amp; TypeScript — Node.js, Next.js, Remix, Express, Fastify</li>
-          <li>Frontend frameworks — React, Vue, and framework-agnostic HTML/CSS checks</li>
+          <li>JavaScript &amp; TypeScript — Node.js, Next.js, Remix, Express, Fastify, Hono</li>
+          <li>Frontend frameworks — React, Vue, Svelte/SvelteKit, Astro, including <code>.vue</code>/<code>.svelte</code>/<code>.astro</code> files</li>
           <li>Databases &amp; ORMs — Prisma, Drizzle, Supabase, Postgres, MySQL, MongoDB</li>
           <li>Infra as code — Docker, Docker Compose, Terraform</li>
         </ul>
@@ -159,12 +183,12 @@
         <h2>Get started in under a minute</h2>
         <p class="section-sub">Open source and free to run. Point it at any project — it reads your code, writes Markdown and JSON reports into your repo, and does nothing else.</p>
         <ul class="checklist">
-          <li>Works on any JavaScript/TypeScript codebase — Node.js, Next.js, React, Vue, and more — no config required</li>
+          <li>Works on any JavaScript/TypeScript codebase — Node.js, Next.js, React, Vue, Svelte, and more — no config required</li>
           <li>Optional second-pass AI review with your own API key</li>
           <li>Full reports written straight into your project</li>
         </ul>
       </div>
-      <div class="code-block">
+      <div class="code-block" data-copy>
         <div class="code-head"><span></span><span></span><span></span></div>
         <pre><code>npx auditsaas scan .
 
@@ -178,8 +202,45 @@ saas-audit scan . --focus privacy
 saas-audit scan . --focus payments
 saas-audit scan . --focus ai
 
-# gate CI on high/critical findings
-saas-audit scan . --fail-on high --no-history</code></pre>
+# list every rule
+saas-audit rules</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="ci" class="ci">
+    <div class="wrap install-inner">
+      <div>
+        <h2>Gate every PR in CI</h2>
+        <p class="section-sub">Add one job and AuditSaas runs on every push. It fails the build on the severities you choose, and findings show up in GitHub's Security tab.</p>
+        <ul class="checklist">
+          <li><code>--fail-on high</code> exits non-zero on high or critical findings</li>
+          <li>SARIF with stable fingerprints, so alerts track across runs instead of duplicating</li>
+          <li><code>--baseline</code> fails only on <em>new</em> findings, so you can adopt it on an existing codebase today</li>
+          <li>Silence a reviewed finding with <code>// auditsaas-ignore RULE_ID -- reason</code> or <code>.auditsaas.json</code>. It stays listed in the report.</li>
+        </ul>
+      </div>
+      <div class="code-block" data-copy>
+        <div class="code-head"><span></span><span></span><span></span></div>
+        <pre><code># .github/workflows/auditsaas.yml
+name: AuditSaas
+on: [push, pull_request]
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npx auditsaas@latest scan . --no-history --fail-on high
+      - if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: audit-output/findings.sarif.json</code></pre>
       </div>
     </div>
   </section>
@@ -193,14 +254,15 @@ saas-audit scan . --fail-on high --no-history</code></pre>
           <li>Bring your own OpenAI/Anthropic-compatible API key</li>
           <li>Or point AUDITSAAS_LLM_BASE_URL at a local model server</li>
           <li>Sends only compact, redacted finding context — never full source</li>
+          <li>Time-limited, and a failed review never blocks the deterministic reports</li>
           <li><code>--no-ai-review</code> skips it entirely</li>
         </ul>
       </div>
-      <div class="code-block">
+      <div class="code-block" data-copy>
         <div class="code-head"><span></span><span></span><span></span></div>
         <pre><code># Hosted provider with your own key
 export AUDITSAAS_LLM_API_KEY=your-provider-key
-export AUDITSAAS_LLM_MODEL=gpt-4.1-mini
+export AUDITSAAS_LLM_MODEL=your-model-id
 export AUDITSAAS_LLM_BASE_URL=https://api.openai.com/v1
 
 # Or a local model server (Ollama, LM Studio, etc.)
@@ -241,6 +303,7 @@ saas-audit scan . --out-dir ./audit-output</code></pre>
       <a href="https://github.com/sagaragarwal94/audit-saas" target="_blank" rel="noopener">GitHub</a>
       <a href="/faq">FAQ</a>
       <a href="/changelog">Changelog</a>
+      <a href="https://github.com/sagaragarwal94/audit-saas/releases" target="_blank" rel="noopener">Releases</a>
       <a href="/feedback">Feedback</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
@@ -250,12 +313,5 @@ saas-audit scan . --out-dir ./audit-output</code></pre>
   </div>
 </footer>
 
-<script>
-  document.getElementById("theme-toggle").addEventListener("click", function () {
-    var next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem("theme", next);
-  });
-</script>
 </body>
 </html>
