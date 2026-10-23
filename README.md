@@ -232,7 +232,9 @@ Publishing to npm (`.github/workflows/publish.yml`) uses [npm Trusted Publishing
    npm publish --access public
    ```
 2. On the package's [npmjs.com settings page](https://www.npmjs.com/package/auditsaas/access), add a Trusted Publisher: provider GitHub Actions, org/user `sagaragarwal94`, repo `audit-saas`, workflow filename `publish.yml`, allowed action `npm publish`.
-3. **Every release after that**: bump `version` in `package.json`, commit, then `git tag v<version> && git push --tags` — the workflow re-runs the tests, checks the tag matches `package.json`'s version, and publishes via OIDC automatically.
+3. **Every release after that**: bump `version` in `package.json` and add a changelog entry to `site/changelog.html`, merge to `main`, then tag that commit with `git tag -a v<version> -m "v<version>" && git push origin v<version>`. The workflow re-runs the tests, checks that the tag matches `package.json`'s version, verifies the package contents, publishes via OIDC, and creates the matching [GitHub Release](https://github.com/sagaragarwal94/audit-saas/releases) with generated notes. Re-running it for a version that's already on npm skips the publish, so a failed release can be retried safely.
+
+Tags are `v<major>.<minor>.<patch>`, one per npm version, always on a commit in `main`. Don't move a tag once its version is on npm. Ship a new patch version instead.
 
 ## License
 
